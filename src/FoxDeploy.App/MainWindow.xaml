@@ -2,10 +2,19 @@
   <Grid Margin="30,25,30,23">
     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
     <Grid Margin="1,0,1,21">
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
       <Image Source="Assets/HM-AppKit.png" Width="40" Height="40" Margin="0,0,12,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-      <StackPanel Grid.Column="1"><TextBlock Text="HM AppKit" FontSize="23" FontWeight="SemiBold" /><TextBlock Text="为工作电脑准备好每一款应用" Style="{StaticResource Caption}" Margin="0,5,0,0" /></StackPanel>
+      <StackPanel Grid.Column="1"><StackPanel Orientation="Horizontal"><TextBlock Text="HM AppKit" FontSize="23" FontWeight="SemiBold" /><Button x:Name="SelfUpdateCheckButton" Content="检查更新" Click="SelfUpdateCheck_Click" Style="{StaticResource QuietButton}" FontSize="10" Margin="10,3,0,0" Padding="5,4" VerticalAlignment="Center" /></StackPanel><TextBlock Text="为工作电脑准备好每一款应用" Style="{StaticResource Caption}" Margin="0,5,0,0" /></StackPanel>
       <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"><Button x:Name="AdminButton" Content="管理员运行" Click="Admin_Click" Padding="11,6" FontSize="11" Background="Transparent" HorizontalAlignment="Right" /><TextBlock x:Name="WingetStatus" Text="正在检查安装源…" Foreground="#98A2B3" FontSize="10" Margin="0,7,1,0" TextAlignment="Right" /></StackPanel>
+      <Border x:Name="SelfUpdateBanner" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed" Background="#EDF2FF" BorderBrush="#D8E1FF" BorderThickness="1" CornerRadius="9" Margin="0,13,0,0" Padding="12,9">
+        <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <StackPanel VerticalAlignment="Center" Margin="0,0,10,0"><TextBlock x:Name="SelfUpdateTitle" FontWeight="SemiBold" FontSize="11" /><TextBlock x:Name="SelfUpdateHint" Foreground="#718096" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0" /></StackPanel>
+          <Button x:Name="SelfUpdateActionButton" Grid.Column="1" Content="下载更新" Click="SelfUpdateAction_Click" Style="{StaticResource PrimaryButton}" FontSize="10" Padding="12,7" VerticalAlignment="Center" />
+          <Button x:Name="SelfUpdateDismissButton" Grid.Column="2" Content="稍后" Click="SelfUpdateDismiss_Click" Style="{StaticResource QuietButton}" FontSize="10" Margin="5,0,0,0" VerticalAlignment="Center" />
+          <ProgressBar x:Name="SelfUpdateDownloadProgress" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed" Height="3" Margin="0,8,0,0" Minimum="0" Maximum="100" Foreground="#4366E9" BorderThickness="0" Background="#DAE3FC" />
+        </Grid>
+      </Border>
     </Grid>
     <Border Grid.Row="1" Style="{StaticResource Card}" Padding="18,14,18,12" Margin="0,0,0,15">
       <Grid>

@@ -1,0 +1,38 @@
+{
+  "Version": "0.6.0",
+  "Date": "2026-10-15",
+  "AutomatedTests": {
+    "Core": 114,
+    "InstallerCache": 24,
+    "JingmaiAdapter": 24,
+    "SelfUpdateDownload": 42,
+    "SelfUpdateApply": 33,
+    "Total": 237,
+    "Failed": 0,
+    "IsolatedUiChecks": 35
+  },
+  "LiveGitHubDownload": {
+    "Repository": "19016563235/HM-AppKit",
+    "ReleaseVerified": "v0.5",
+    "Sha256": "43156e5912313438c27a53917e9f982b07d97856fc68ae468e7fce30809108ba",
+    "ChecksumAndExecutableVersionMatched": true,
+    "NoDowngradeOfferedToVersion060": true,
+    "VendorInstallersExecuted": false
+  },
+  "NativeHelperFixture": {
+    "OriginalVersion": "0.5.0",
+    "ResultVersion": "0.6.0",
+    "Applied": true,
+    "Restarted": true,
+    "ExecutableMatchedVerifiedPayload": true,
+    "CustomCatalogUnchanged": true,
+    "InstallerCacheUnchanged": true,
+    "ConfigurationUnchanged": true,
+    "UnknownUserFileUnchanged": true,
+    "ActualUserConfigurationUnchanged": true,
+    "OriginalInstalledApplicationReplacedByTest": false,
+    "HelperExited": true,
+    "FixtureProcessesAndStagesCleaned": true
+  },
+  "Privacy": "Public summary excludes host names, user paths, process identifiers, private configuration and transaction nonces. Raw local test records remain outside Git."
+}

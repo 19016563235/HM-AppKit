@@ -2,7 +2,7 @@
 
 Windows 装机助手：选择岗位、软件和安装位置，一键依次安装。默认从官方渠道获取当前版本，也可选择独立存放的本地安装包。第三方安装包不嵌入助手，不随发布压缩包分发。
 
-v0.5 更名为 HM AppKit，新增默认开启的“保留安装包”和启动缓存更新检查。界面保留三列紧凑应用卡片、各应用真实品牌 logo 和 HM 主图标；安装路径、来源、状态和“修改”入口保留在卡片中。
+v0.6 新增 HM AppKit 自身更新：打开时检查 GitHub Releases，有新版时提示下载，确认后重启更新，保留原配置和安装包缓存。界面保留三列紧凑应用卡片、各应用真实品牌 logo 和 HM 主图标；安装路径、来源、状态和“修改”入口保留在卡片中。
 
 ## 使用
 
@@ -14,6 +14,14 @@ v0.5 更名为 HM AppKit，新增默认开启的“保留安装包”和启动�
 6. “保留安装包”默认开启，可随时关闭，选择会随配置保存。保留的安装包位于 `HM AppKit.exe` 旁的 `Local Installer` 文件夹，与应用安装目录分开。
 
 开启“保留安装包”时，启动只检查并更新已经缓存的在线安装包，不会批量下载尚未缓存的软件。仅启动助手或查看计划不会安装软件；点击安装会接受所选软件及适用的 WinGet 源协议，可能出现管理员权限确认。
+
+## HM AppKit 自身更新
+
+从 v0.6 开始，打开助手会查询 [GitHub Releases](https://github.com/19016563235/HM-AppKit/releases/latest) 的最新正式版。有更新时显示版本提示；选择更新后下载并校验压缩包，确认重启后替换程序文件。安装业务软件期间不会替换助手，下载或网络检查失败不会影响当前版本继续使用。
+
+更新在原程序目录进行，不需要搬移文件夹。`%LocalAppData%\HM AppKit\settings.json` 中的岗位、安装路径和选项，以及程序旁的 `Local Installer` 缓存均保留；自定义过的 `Data/catalog.json` 也会保留。下载的更新包与业务软件安装包分开存放。
+
+**v0.5 没有助手自身更新功能，需要手动升级一次到 v0.6。** 从 Releases 下载压缩包，关闭旧助手，解压到原程序目录并覆盖程序文件，保留原来的 `Local Installer` 文件夹；配置位于 AppData，不需要复制。之后可直接使用启动时的新版提示。详情见 [更新说明](docs/self-update.md)。
 
 ## 内置软件
 
@@ -66,8 +74,10 @@ v0.5 对京麦使用“常规安装·预填目录”：向导将预填所选目�
 .\scripts\Build.ps1
 ```
 
-v0.5 发布位置：`artifacts/HM-AppKit/v0.5/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip`。构建与自动化验证不会安装业务软件，也不会复制 `F:\客服软件` 或 `Local Installer` 中的安装包进入产物。
+版本统一维护在 `Directory.Build.props`。v0.6 发布位置为 `artifacts/HM-AppKit/v0.6/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.6/HM-AppKit-win-x64.zip`，同目录生成 `.zip.sha256`。后续版本的输出目录由版本号自动推导。构建与自动化验证不会安装业务软件，也不会复制 `F:\客服软件` 或 `Local Installer` 中的安装包进入产物。
 
 构建使用仓库中的 `evidence/` 公开摘要，不依赖本地测试产生的 `artifacts/`、已安装业务软件或历史主机快照。
 
 京麦安装适配器使用 7-Zip 只读展开官方安装包。发布包保留 `licenses/7zip-license.txt` 和 `licenses/7zip-NOTICE.txt`，重新分发时应保留这些许可文件。
+
+推送 `v*` 标签可触发 GitHub Actions 发布；标签需与应用版本相符（例如 `v0.6` 和 `v0.6.0` 均对应 `0.6.0`），并提供与标签精确对应的 `RELEASE_NOTES_<tag>.md`。流程完成测试、构建和压缩包检查后发布 ZIP 与 SHA-256 文件，已公开的同名 Release 不会被覆盖。

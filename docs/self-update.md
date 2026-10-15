@@ -1,0 +1,43 @@
+# HM AppKit 自身更新
+
+HM AppKit v0.6 起会在打开时检查 [19016563235/HM-AppKit 的 GitHub Releases](https://github.com/19016563235/HM-AppKit/releases/latest)，只提示高于当前程序版本的正式版，忽略草稿和预发布版本。未发现更新、网络不可用或 GitHub 暂时限流时，当前版本仍可正常使用。
+
+## 使用
+
+1. 打开 HM AppKit，等待启动检查完成。
+2. 出现新版提示后，可查看版本并选择下载，也可稍后再更新。
+3. 下载和校验成功后，确认重启更新。助手会等待自身退出，再在原目录替换程序文件并重新打开。
+
+业务软件正在安装时可以检查和下载更新，须等安装结束后才能重启替换助手。更新不会自动安装、升级或卸载任何业务软件。
+
+## 保留的数据
+
+| 数据 | 位置 | 更新行为 |
+| --- | --- | --- |
+| 岗位选择、各应用安装目录和选项 | `%LocalAppData%\HM AppKit\settings.json` | 保留 |
+| 业务软件安装包缓存 | `HM AppKit.exe` 旁的 `Local Installer` | 保留 |
+| 自定义软件目录 | `Data/catalog.json` | 已自定义时保留；标准目录随新版更新 |
+| 日志 | `%LocalAppData%\HM AppKit\Logs` | 保留 |
+
+新版需要写入当前程序目录；如果目录不可写，助手会请求管理员授权。取消授权时继续运行当前版本。也可将完整程序目录连同 `Local Installer` 移到可写的位置，或按下面的手动方式升级。
+
+## 从 v0.5 首次升级
+
+v0.5 尚无助手自身更新入口，需要手动升级一次：
+
+1. 从上述 Releases 下载 `HM-AppKit-win-x64.zip`。SHA-256 校验文件同时提供。
+2. 关闭旧版 HM AppKit。
+3. 解压压缩包到旧程序目录，覆盖程序文件。保留已有 `Local Installer` 文件夹；若自己修改过 `Data/catalog.json`，先保存该文件，解压后放回。
+4. 打开新的 `HM AppKit.exe`。AppData 中的配置会继续读取，不需要重新设置安装目录和选项。
+
+也可以解压到新目录并把旧目录的 `Local Installer` 一并移过去；配置仍从原 AppData 路径读取。
+
+## 发布要求
+
+助手只从固定仓库查询新版本。正式版 Release 使用稳定版标签（例如 `v0.6` 或 `v0.6.1`），提供 `HM-AppKit-win-x64.zip` 和 `HM-AppKit-win-x64.zip.sha256`。下载必须经过完整性校验后才会应用；Release 中的版本、资产名称和包内程序版本必须相符。
+
+仓库内 `Directory.Build.props` 是唯一版本来源。执行 `scripts/Build.ps1` 自动生成版本目录、ZIP 及 SHA-256 文件。GitHub Actions 在发布前校验标签与应用版本，并要求 `RELEASE_NOTES_<tag>.md` 存在；已公开版本不会被覆盖。
+
+## 验证
+
+v0.6 完成 237 项核心、缓存、京麦与自身更新测试，以及 35 项隔离界面检查。真实 GitHub 下载通过校验和程序版本检查；真实更新助手已在独立测试目录将 v0.5 替换为 v0.6 并重新启动，自定义清单、缓存、配置及未知文件哈希均保持不变。本机原有配置未修改，测试进程与暂存目录已清理。公开摘要见 [验证记录](../evidence/v0.6-self-update/verification.json)。

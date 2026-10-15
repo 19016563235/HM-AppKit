@@ -7,7 +7,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>HM AppKit</AssemblyName>
     <RootNamespace>FoxDeploy.App</RootNamespace>
-    <Version>0.5.0</Version>
     <Title>HM AppKit</Title>
     <Description>按岗位批量安装 Windows 应用</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>

@@ -1,8 +1,8 @@
-name: Publish HM AppKit v0.5
+name: Publish HM AppKit
 
 on:
   push:
-    tags: [v0.5]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/tags/v0.5'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     timeout-minutes: 25
     permissions:
@@ -31,11 +31,19 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
+      - name: Validate release tag and notes
+        run: |
+          $release = ./scripts/Get-ReleaseMetadata.ps1 -Tag $env:GITHUB_REF_NAME
+          if (-not (Test-Path -LiteralPath $release.NotesFile -PathType Leaf)) {
+            throw "Missing exact-tag release notes: $($release.NotesFile)"
+          }
+          "HM_RELEASE_ROOT=$($release.RelativeOutputRoot)" >> $env:GITHUB_ENV
+          "HM_RELEASE_NOTES=$($release.NotesFile)" >> $env:GITHUB_ENV
       - name: Test and build Windows x64 package
         run: ./scripts/Build.ps1
-      - name: Verify package and write SHA-256
+      - name: Verify package and SHA-256
         run: |
-          $package = 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip'
+          $package = Join-Path $env:HM_RELEASE_ROOT 'HM-AppKit-win-x64.zip'
           $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $package).Path)
           try {
             $programs = @($archive.Entries | Where-Object FullName -match '\.(exe|msi)$' | ForEach-Object FullName)
@@ -47,7 +55,8 @@ jobs:
             }
           } finally { $archive.Dispose() }
           $hash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  HM-AppKit-win-x64.zip" | Set-Content -LiteralPath ($package + '.sha256') -Encoding ascii
+          $checksum = (Get-Content -LiteralPath ($package + '.sha256') -Raw).Trim()
+          if ($checksum -ne "$hash  HM-AppKit-win-x64.zip") { throw 'Build checksum mismatch.' }
           Write-Output "SHA256: $hash"
       - name: Publish GitHub Release
         env:
@@ -58,10 +67,11 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             if (-not ($existing | ConvertFrom-Json).isDraft) { throw 'A published release already exists; it will not be overwritten.' }
           } else {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --verify-tag --title 'HM AppKit v0.5' --notes-file RELEASE_NOTES_v0.5.md --draft
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --verify-tag --title "HM AppKit $tag" --notes-file $env:HM_RELEASE_NOTES --draft
             if ($LASTEXITCODE -ne 0) { throw 'Unable to create the release draft.' }
           }
-          gh release upload $tag 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip' 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip.sha256' --repo $env:GITHUB_REPOSITORY --clobber
+          $package = Join-Path $env:HM_RELEASE_ROOT 'HM-AppKit-win-x64.zip'
+          gh release upload $tag $package ($package + '.sha256') --repo $env:GITHUB_REPOSITORY --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Unable to upload the release assets.' }
           gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false --latest
           if ($LASTEXITCODE -ne 0) { throw 'Unable to publish the release.' }

@@ -63,6 +63,7 @@ public partial class MainWindow : Window
         UpdateRoles();
         UpdateSourceControls();
         UpdateSummary();
+        InitializeSelfUpdater();
         InstallButton.ToolTip = "点击后将接受所选应用的软件许可及 WinGet 源协议，并按计划执行安装。静默安装仍可能显示 Windows 管理员授权提示。";
         using (var identity = WindowsIdentity.GetCurrent())
         {
@@ -75,7 +76,7 @@ public partial class MainWindow : Window
         Loaded += async (_, _) =>
         {
             if (_smokeTest) return;
-            await Task.WhenAll(CheckWingetAsync(), CheckCachedInstallersAsync());
+            await Task.WhenAll(CheckWingetAsync(), CheckCachedInstallersAsync(), CheckSelfUpdateAsync(manual: false));
         };
         AppendLog("已就绪。安装前可预览每个应用的目标路径与支持情况。");
     }
@@ -453,7 +454,7 @@ public partial class MainWindow : Window
     {
         var count = _rows.Count(r => r.Selected);
         SelectionSummary.Text = $"已选择 {count} 个应用";
-        InstallButton.IsEnabled = !_isRunning && count > 0;
+        InstallButton.IsEnabled = !_isRunning && !_applyingSelfUpdate && count > 0;
     }
 
     private void BrowsePath_Click(object sender, RoutedEventArgs e)
@@ -501,7 +502,7 @@ public partial class MainWindow : Window
 
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
-        if (_isRunning) return;
+        if (_isRunning || _applyingSelfUpdate) return;
         KeyboardCommit();
         var selected = SelectedRows();
         if (selected.Count == 0) { RunStatus.Text = "请先选择需要安装的应用。"; return; }
@@ -582,6 +583,7 @@ public partial class MainWindow : Window
         if (AdminButton.Content is string text && !text.StartsWith('✓')) AdminButton.IsEnabled = !running;
         foreach (var row in _rows) row.IsEditable = !running;
         foreach (var button in RoleButtons.Children.OfType<Button>()) button.IsEnabled = !running;
+        UpdateSelfUpdateControls();
     }
 
     private void Stop_Click(object sender, RoutedEventArgs e)
@@ -621,7 +623,7 @@ public partial class MainWindow : Window
 
     private void Admin_Click(object sender, RoutedEventArgs e)
     {
-        if (_isRunning) return;
+        if (_isRunning || _applyingSelfUpdate) return;
         try
         {
             SaveState();
@@ -664,6 +666,7 @@ public partial class MainWindow : Window
             return;
         }
         _startupUpdateCancellation.Cancel();
+        _selfUpdateDownloadCancellation?.Cancel();
         SaveState();
     }
 

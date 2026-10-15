@@ -6,8 +6,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+$release = & (Join-Path $PSScriptRoot 'Get-ReleaseMetadata.ps1')
 if (-not $OutputDirectory) {
-    $OutputDirectory = Join-Path $projectRoot "artifacts\HM-AppKit\v0.5\$Runtime"
+    $OutputDirectory = Join-Path $projectRoot ($release.RelativeOutputRoot + '/' + $Runtime)
 }
 $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 $publicEvidence = @(
@@ -30,7 +31,8 @@ $publicEvidence = @(
     'v0.5-cache-live/live-cache.json',
     'v0.5-source-live/source-resolution.json',
     'v0.5-ui/settings-check.json',
-    'jingmai-research/cleanup.json'
+    'jingmai-research/cleanup.json',
+    'v0.6-self-update/verification.json'
 )
 foreach ($evidence in $publicEvidence) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ('evidence/' + $evidence)) -PathType Leaf)) {
@@ -49,13 +51,19 @@ try {
     & dotnet run --project tests/FoxDeploy.Cache.Tests/FoxDeploy.Cache.Tests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw '安装包缓存与更新验证未通过。' }
 
+    & dotnet run --project tests/FoxDeploy.Update.Tests/FoxDeploy.Update.Tests.csproj -c Release
+    if ($LASTEXITCODE -ne 0) { throw '助手更新检查与下载验证未通过。' }
+
+    & dotnet run --project tests/FoxDeploy.UpdateApply.Tests/FoxDeploy.UpdateApply.Tests.csproj -c Release
+    if ($LASTEXITCODE -ne 0) { throw '助手更新应用与配置保留验证未通过。' }
+
     & dotnet publish src/FoxDeploy.App/FoxDeploy.App.csproj -c Release -r $Runtime --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:PublishTrimmed=false -p:DebugType=None -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '桌面应用发布失败。' }
 
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $OutputDirectory -Force
     $docsDestination = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDestination -Force | Out-Null
-    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md')) {
+    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $document)) -Destination $docsDestination -Force
     }
     # Only sanitized, named summaries are public. Raw host snapshots, vendor
@@ -89,7 +97,10 @@ try {
         (Join-Path $OutputDirectory 'catalog')
     )
     Compress-Archive -LiteralPath $archiveInputs -DestinationPath $archive -Force
+    $archiveHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$archiveHash  $([System.IO.Path]::GetFileName($archive))" | Set-Content -LiteralPath ($archive + '.sha256') -Encoding ascii
     Write-Output "ZIP: $archive"
+    Write-Output "ZIP SHA256: $archiveHash"
 } finally {
     Pop-Location
 }
