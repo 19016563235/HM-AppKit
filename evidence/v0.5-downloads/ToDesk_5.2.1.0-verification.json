@@ -1,0 +1,10 @@
+{
+  "Checked": "2026-10-15T18:04:10.1544987+08:00",
+  "Source": "https://dl.todesk.com/irrigation/ToDesk_5.2.1.0.exe",
+  "Length": 159362472,
+  "Sha256": "CEECA98F86EB8FE79F6A7622B02D41B5031496119C13385E5D9718C134118995",
+  "Signature": "Valid",
+  "Publisher": "Hainan YouQu Technology Co., Ltd",
+  "Container": "NSIS 3 Unicode / Deflate",
+  "Executed": false
+}

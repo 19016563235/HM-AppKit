@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Native/7zip/7z.exe" LogicalName="FoxDeploy.Native.7zip.7z.exe" />
+    <EmbeddedResource Include="Native/7zip/7z.dll" LogicalName="FoxDeploy.Native.7zip.7z.dll" />
+    <EmbeddedResource Include="Native/7zip/License.txt" LogicalName="FoxDeploy.Native.7zip.License.txt" />
+    <EmbeddedResource Include="Native/7zip/NOTICE.txt" LogicalName="FoxDeploy.Native.7zip.NOTICE.txt" />
+    <None Update="Native/7zip/License.txt" Link="licenses/7zip-license.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Native/7zip/NOTICE.txt" Link="licenses/7zip-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

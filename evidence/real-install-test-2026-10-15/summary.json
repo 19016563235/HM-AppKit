@@ -1,0 +1,37 @@
+{
+  "Date": "2026-10-15",
+  "Timezone": "Asia/Shanghai",
+  "Execution": "Explicitly authorized host installation; not isolated",
+  "SuccessfulAppIds": [
+    "qianniu",
+    "doudian",
+    "pinduoduo",
+    "kuaiyu",
+    "dewu",
+    "qianfan"
+  ],
+  "UnverifiedAppIds": [
+    "jingmai"
+  ],
+  "SkippedExistingAppIds": [
+    "feishu",
+    "weixin",
+    "todesk",
+    "jianying"
+  ],
+  "CleanupStatus": "Verified 2026-10-15 17:06 +08:00: no added/changed/removed baseline uninstall entries; all test targets and identified new services/drivers/tasks removed; original applications unchanged.",
+  "IncludedRuns": [
+    "20261015-host-dewu",
+    "20261015-host-doudian",
+    "20261015-host-jingmai",
+    "20261015-host-jingmai-strict-skip",
+    "20261015-host-kuaiyu",
+    "20261015-host-pinduoduo",
+    "20261015-host-pinduoduo-retry",
+    "20261015-host-qianfan",
+    "20261015-host-qianfan-retry",
+    "20261015-host-qianfan-skip-recheck",
+    "20261015-host-qianniu"
+  ],
+  "Privacy": "Only tested app records, payload evidence and installer process arguments were exported. Full host uninstall registry and full system service/task inventories were omitted."
+}

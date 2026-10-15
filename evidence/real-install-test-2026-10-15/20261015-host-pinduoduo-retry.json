@@ -1,0 +1,117 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-pinduoduo-retry",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-pinduoduo-retry\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:57:36.3362472+08:00",
+  "Finished": "2026-10-15T16:58:10.4621134+08:00",
+  "CatalogSha256": "73E7259BF29F7E8018551BBD5049EBE1EC6B68DBB88AC93DBC1CC6D075F69793",
+  "Applications": [
+    {
+      "Id": "pinduoduo",
+      "Name": "拼多多商家工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Pinduoduo",
+      "State": "Succeeded",
+      "Message": "已核对系统安装记录与目录：E:\\TempSoftware\\Pinduoduo",
+      "Started": "2026-10-15T16:57:36.3862158+08:00",
+      "Finished": "2026-10-15T16:58:10.3636809+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7"
+      ],
+      "FileCountAtLeast": 4501,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\PddWorkbench.exe",
+          "Bytes": 3541496,
+          "FileVersion": "3.7.3.7"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\BugReport.exe",
+          "Bytes": 813048,
+          "FileVersion": "拼多多商家工作台"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\CatchDump.exe",
+          "Bytes": 316688,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\CmdHelper.exe",
+          "Bytes": 988152,
+          "FileVersion": "3.7.3.7"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\courgette.exe",
+          "Bytes": 961528,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\GetWinConfigEx.exe",
+          "Bytes": 1076728,
+          "FileVersion": "3.7.3.7"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PddCatchDump.exe",
+          "Bytes": 364024,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PDDLauncher.exe",
+          "Bytes": 3541496,
+          "FileVersion": "3.7.3.7"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PDDPlayer.exe",
+          "Bytes": 1281016,
+          "FileVersion": "3.7.3.7"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PddUninstall.exe",
+          "Bytes": 8980984,
+          "FileVersion": "3.7.3.7"
+        }
+      ],
+      "Payload": {
+        "FileName": "Release_b0319613531b7b7ae4cd97fde43d501d.exe",
+        "Bytes": 221643256,
+        "Sha256": "450C89B6875220CF07B7D2CBE6DAF28454A690CBF05AB304ABD8D7A6DF278ECD",
+        "FileVersion": "3.7.3.7",
+        "ProductVersion": "3.7.3.7",
+        "VerifiedPublisher": "上海寻梦信息技术有限公司",
+        "MetadataUrl": "",
+        "DownloadUrl": "https://meta.pinduoduo.com/api/one/app/v1/lateststable?appId=com.xunmeng.workbench&platform=windows&subType=main",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T16:57:39.2721993+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "Release_b0319613531b7b7ae4cd97fde43d501d.exe",
+          "Arguments": [
+            "/slient",
+            "/installpath=E:\\TempSoftware\\Pinduoduo"
+          ],
+          "UnquotedFinalArgument": false,
+          "Started": "2026-10-15T16:57:39.2799807+08:00",
+          "Finished": "2026-10-15T16:58:10.3420094+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "拼多多商家工作台",
+          "DisplayVersion": "3.7.3",
+          "InstallLocation": null,
+          "DisplayIcon": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PddWorkbench.exe",
+          "UninstallString": "E:\\TempSoftware\\Pinduoduo\\pinduoduo\\3.7.3.7\\PddUninstall.exe"
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}

@@ -1,0 +1,66 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-pinduoduo",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-pinduoduo\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:52:08.2554868+08:00",
+  "Finished": "2026-10-15T16:52:42.7093851+08:00",
+  "CatalogSha256": "B615908125134159B83D52300C906D6E666E0D4B1E7FCBFE39E74C9F1AF137E5",
+  "Applications": [
+    {
+      "Id": "pinduoduo",
+      "Name": "拼多多商家工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Pinduoduo",
+      "State": "Failed",
+      "Message": "安装目录不符合要求。系统记录：C:\\Program Files (x86)\\pinduoduo\\3.7.3.7；要求：E:\\TempSoftware\\Pinduoduo。未自动迁移文件。",
+      "Started": "2026-10-15T16:52:08.3044829+08:00",
+      "Finished": "2026-10-15T16:52:42.662169+08:00",
+      "TargetExists": false,
+      "RegistryLocationsMatchTarget": false,
+      "EffectiveLocations": [
+        "C:\\Program Files (x86)\\pinduoduo\\3.7.3.7"
+      ],
+      "FileCountAtLeast": 0,
+      "ExecutableFilesSample": [],
+      "Payload": {
+        "FileName": "Release_b0319613531b7b7ae4cd97fde43d501d.exe",
+        "Bytes": 221643256,
+        "Sha256": "450C89B6875220CF07B7D2CBE6DAF28454A690CBF05AB304ABD8D7A6DF278ECD",
+        "FileVersion": "3.7.3.7",
+        "ProductVersion": "3.7.3.7",
+        "VerifiedPublisher": "上海寻梦信息技术有限公司",
+        "MetadataUrl": "",
+        "DownloadUrl": "https://meta.pinduoduo.com/api/one/app/v1/lateststable?appId=com.xunmeng.workbench&platform=windows&subType=main",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T16:52:11.2698989+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "Release_b0319613531b7b7ae4cd97fde43d501d.exe",
+          "Arguments": [
+            "/slient",
+            "/installpath=E:\\TempSoftware\\Pinduoduo"
+          ],
+          "UnquotedFinalArgument": false,
+          "Started": "2026-10-15T16:52:11.2752+08:00",
+          "Finished": "2026-10-15T16:52:42.6520007+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "拼多多商家工作台",
+          "DisplayVersion": "3.7.3",
+          "InstallLocation": null,
+          "DisplayIcon": "C:\\Program Files (x86)\\pinduoduo\\3.7.3.7\\PddWorkbench.exe",
+          "UninstallString": "C:\\Program Files (x86)\\pinduoduo\\3.7.3.7\\PddUninstall.exe"
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "feishu",
+    "Name": "飞书",
+    "Version": "8.1.17",
+    "EffectiveLocation": "D:\\Software\\Feishu",
+    "Decision": "AlreadyInstalled; skipped before downloading or executing any installer"
+  },
+  {
+    "Id": "weixin",
+    "Name": "微信",
+    "Version": "4.1.15.13",
+    "EffectiveLocation": "D:\\Software\\Tencent\\Weixin",
+    "Decision": "AlreadyInstalled; skipped before downloading or executing any installer"
+  },
+  {
+    "Id": "todesk",
+    "Name": "ToDesk",
+    "Version": "5.1.0.0",
+    "EffectiveLocation": "D:\\Software\\ToDesk",
+    "Decision": "AlreadyInstalled; skipped before downloading or executing any installer"
+  },
+  {
+    "Id": "jianying",
+    "Name": "剪映专业版",
+    "Version": "11.5.0.14471",
+    "EffectiveLocation": "D:\\Software\\JianyingPro",
+    "Decision": "AlreadyInstalled; skipped before downloading or executing any installer"
+  }
+]

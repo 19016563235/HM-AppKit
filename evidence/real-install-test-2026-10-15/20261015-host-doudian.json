@@ -1,0 +1,117 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-doudian",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-doudian\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:50:11.2865398+08:00",
+  "Finished": "2026-10-15T16:50:29.0349675+08:00",
+  "CatalogSha256": "B615908125134159B83D52300C906D6E666E0D4B1E7FCBFE39E74C9F1AF137E5",
+  "Applications": [
+    {
+      "Id": "doudian",
+      "Name": "抖店工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Doudian",
+      "State": "Succeeded",
+      "Message": "已核对系统安装记录与目录：E:\\TempSoftware\\Doudian",
+      "Started": "2026-10-15T16:50:11.3342688+08:00",
+      "Finished": "2026-10-15T16:50:28.9310195+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Doudian\\抖店工作台"
+      ],
+      "FileCountAtLeast": 458,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\抖店工作台.exe",
+          "Bytes": 1629048,
+          "FileVersion": "1.1.12"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\抖店工作台卸载.exe",
+          "Bytes": 1687392,
+          "FileVersion": "1.1.12"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\app_shell_updater.exe",
+          "Bytes": 1561464,
+          "FileVersion": "1.1.12"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\doudian.exe",
+          "Bytes": 160643960,
+          "FileVersion": "1.1.12"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\dump_reporter.exe",
+          "Bytes": 1172856,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\elevation_service.exe",
+          "Bytes": 1970552,
+          "FileVersion": "108.0.5359.215"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\parfait_crash_handler.exe",
+          "Bytes": 1115512,
+          "FileVersion": "1.4.4.0"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\tt_crash_reporter.exe",
+          "Bytes": 2004344,
+          "FileVersion": "1.1.12"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\抖店工作台_doctor.exe",
+          "Bytes": 1623416,
+          "FileVersion": "1.0.2155.0"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Doudian\\抖店工作台\\1.1.12\\resources\\elevate.exe",
+          "Bytes": 119672,
+          "FileVersion": "1, 0, 0, 2894"
+        }
+      ],
+      "Payload": {
+        "FileName": "doudian_v1.1.12_x64.exe",
+        "Bytes": 206067800,
+        "Sha256": "F2589FB93B5B0158EDD0FA35D4CF2C7E70F383F62E170C0FF7E5DFF52A359FBE",
+        "FileVersion": "1.1.12",
+        "ProductVersion": "1.1.12",
+        "VerifiedPublisher": "Douyin Vision Co., Ltd.",
+        "MetadataUrl": "https://tron.jiyunhudong.com/api/sdk/check_update?pid=7005992474254514440&branch=master&buildId=&uid=",
+        "DownloadUrl": "",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T16:50:21.0941015+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "doudian_v1.1.12_x64.exe",
+          "Arguments": [
+            "/S",
+            "/D=E:\\TempSoftware\\Doudian"
+          ],
+          "UnquotedFinalArgument": true,
+          "Started": "2026-10-15T16:50:21.1004594+08:00",
+          "Finished": "2026-10-15T16:50:28.9185462+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "抖店工作台",
+          "DisplayVersion": "1.1.12",
+          "InstallLocation": "E:\\TempSoftware\\Doudian\\抖店工作台",
+          "DisplayIcon": "E:\\TempSoftware\\Doudian\\抖店工作台\\抖店工作台.exe",
+          "UninstallString": "\"E:\\TempSoftware\\Doudian\\抖店工作台\\抖店工作台卸载.exe\""
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}

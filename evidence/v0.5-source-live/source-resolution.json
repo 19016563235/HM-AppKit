@@ -1,0 +1,168 @@
+[
+  {
+    "Id": "feishu",
+    "Name": "\u98DE\u4E66",
+    "State": "Resolved",
+    "Url": "https://sf3-cn.feishucdn.com/obj/ee-appcenter/8f1b04df/Feishu-win32_x64-8.2.14-signed.exe",
+    "ExpectedSha256": "0B20F39C0671DF79B49ED6B3C6613CE024DBB85CBA9C5A4CAABCB1F63D01005C",
+    "Version": "8.2.14",
+    "AllowedPublishers": [
+      "Beijing Feishu Technology Co.,Ltd."
+    ],
+    "Started": "2026-10-15T18:07:47.8046735+08:00",
+    "Finished": "2026-10-15T18:07:49.1860264+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "weixin",
+    "Name": "\u5FAE\u4FE1",
+    "State": "Resolved",
+    "Url": "https://dldir1v6.qq.com/weixin/Universal/Windows/WeChatWin_4.1.15.exe",
+    "ExpectedSha256": "AA727E6CC74CD7C4E101C350D125508B0230A8A19C1F5304BF6F33DDE2E758C5",
+    "Version": "4.1.15.53",
+    "AllowedPublishers": [
+      "Tencent Technology (Shenzhen) Company Limited"
+    ],
+    "Started": "2026-10-15T18:07:49.1937533+08:00",
+    "Finished": "2026-10-15T18:07:49.8632869+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "todesk",
+    "Name": "ToDesk",
+    "State": "Resolved",
+    "Url": "https://dl.todesk.com/irrigation/ToDesk_5.2.1.0.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "Hainan YouQu Technology Co., Ltd"
+    ],
+    "Started": "2026-10-15T18:07:49.8638987+08:00",
+    "Finished": "2026-10-15T18:07:49.9509749+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "qianniu",
+    "Name": "\u5343\u725B\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://download.alicdn.com/wangwang/qianniu_(9.97.74N)_NK_64.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "TAOBAO (CHINA) SOFTWARE CO.,LTD."
+    ],
+    "Started": "2026-10-15T18:07:49.9515571+08:00",
+    "Finished": "2026-10-15T18:07:50.0796677+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "doudian",
+    "Name": "\u6296\u5E97\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://lf3-cdn-tos.bytescm.com/obj/ecom-dianshang-im/pigeon-client/win-x64/1.1.12/1.0.3421_507190403/doudian_v1.1.12_x64.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "Douyin Vision Co., Ltd."
+    ],
+    "Started": "2026-10-15T18:07:50.08021+08:00",
+    "Finished": "2026-10-15T18:07:50.1876811+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "jingmai",
+    "Name": "\u4EAC\u9EA6\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://s.360buyimg.com/man.assist.jd.com/JdWorkStationSetup13.10.0.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "\u5317\u4EAC\u4EAC\u4E1C\u5C1A\u79D1\u4FE1\u606F\u6280\u672F\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.1883471+08:00",
+    "Finished": "2026-10-15T18:07:50.3205773+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "pinduoduo",
+    "Name": "\u62FC\u591A\u591A\u5546\u5BB6\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://meta.pinduoduo.com/api/one/app/v1/lateststable?appId=com.xunmeng.workbench\u0026platform=windows\u0026subType=main",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "\u4E0A\u6D77\u5BFB\u68A6\u4FE1\u606F\u6280\u672F\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.3210724+08:00",
+    "Finished": "2026-10-15T18:07:50.3211382+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "qianfan",
+    "Name": "\u5343\u5E06\u5BA2\u670D\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://walle.xiaohongshu.com/client-update/%E5%8D%83%E5%B8%86%E5%AE%A2%E6%9C%8D%E5%B7%A5%E4%BD%9C%E5%8F%B0_setup_1.2.6.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "\u884C\u541F\u4FE1\u606F\u79D1\u6280\uFF08\u6B66\u6C49\uFF09\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.3216375+08:00",
+    "Finished": "2026-10-15T18:07:50.4121871+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "kuaiyu",
+    "Name": "\u5FEB\u8BED\u5BA2\u670D\u5DE5\u4F5C\u53F0",
+    "State": "Resolved",
+    "Url": "https://p5-ec.ecukwai.com/udata/pkg/ESHOP-ELECTRON/release/1.1.4-1722/kwaixiaodian-Setup-1.1.4.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "Beijing Kuaishou Technology Co., Ltd.",
+      "\u5317\u4EAC\u5FEB\u624B\u79D1\u6280\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.4128181+08:00",
+    "Finished": "2026-10-15T18:07:50.8222948+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "dewu",
+    "Name": "\u5F97\u7269\u5546\u5BB6\u5BA2\u670D",
+    "State": "Resolved",
+    "Url": "https://h5static.dewu.com/mcs-platform-latest/%E5%BE%97%E7%89%A9%E5%95%86%E5%AE%B6%E5%AE%A2%E6%9C%8D3.0.exe",
+    "ExpectedSha256": null,
+    "Version": null,
+    "AllowedPublishers": [
+      "\u4E0A\u6D77\u5F97\u7269\u4FE1\u606F\u96C6\u56E2\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.8229461+08:00",
+    "Finished": "2026-10-15T18:07:50.8230702+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  },
+  {
+    "Id": "jianying",
+    "Name": "\u526A\u6620\u4E13\u4E1A\u7248",
+    "State": "Resolved",
+    "Url": "https://lf3-package.vlabstatic.com/obj/faceu-packages/Jianying_11_6_0_14552_jianyingpro_0_creatortool.exe",
+    "ExpectedSha256": "410441C0CB4150216127D6CDA2E242D41A152F3E2E4A749227EA4AF52215CA48",
+    "Version": "11.6.0.14552",
+    "AllowedPublishers": [
+      "\u6DF1\u5733\u5E02\u8138\u840C\u79D1\u6280\u6709\u9650\u516C\u53F8"
+    ],
+    "Started": "2026-10-15T18:07:50.8234729+08:00",
+    "Finished": "2026-10-15T18:07:51.5011984+08:00",
+    "InstallerDownloaded": false,
+    "InstallerExecuted": false
+  }
+]

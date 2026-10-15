@@ -1,0 +1,92 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-kuaiyu",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-kuaiyu\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T17:00:13.9103215+08:00",
+  "Finished": "2026-10-15T17:00:21.8537733+08:00",
+  "CatalogSha256": "73E7259BF29F7E8018551BBD5049EBE1EC6B68DBB88AC93DBC1CC6D075F69793",
+  "Applications": [
+    {
+      "Id": "kuaiyu",
+      "Name": "快语客服工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Kuaiyu",
+      "State": "Succeeded",
+      "Message": "已核对系统安装记录与目录：E:\\TempSoftware\\Kuaiyu",
+      "Started": "2026-10-15T17:00:15.8775464+08:00",
+      "Finished": "2026-10-15T17:00:19.7505061+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Kuaiyu"
+      ],
+      "FileCountAtLeast": 106,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Kuaiyu\\Uninstall 快语客服工作台.exe",
+          "Bytes": 227432,
+          "FileVersion": "1.1.4"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Kuaiyu\\快语客服工作台.exe",
+          "Bytes": 157642160,
+          "FileVersion": "1.1.4"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Kuaiyu\\resources\\elevate.exe",
+          "Bytes": 119728,
+          "FileVersion": "1, 0, 0, 2894"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Kuaiyu\\resources\\KepmBusPackage\\Check.exe",
+          "Bytes": 582936,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Kuaiyu\\resources\\KepmBusPackage\\KepmUpdater.exe",
+          "Bytes": 8605976,
+          "FileVersion": null
+        }
+      ],
+      "Payload": {
+        "FileName": "kwaixiaodian-Setup-1.1.4.exe",
+        "Bytes": 74598976,
+        "Sha256": "05CCA684001A8249059F134D5EE251F036E83F5A552EA08667F3CF2FCDA040BE",
+        "FileVersion": "1.1.4",
+        "ProductVersion": "1.1.4",
+        "VerifiedPublisher": "北京快手科技有限公司",
+        "MetadataUrl": "https://im.kwaixiaodian.com/",
+        "DownloadUrl": "",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T17:00:17.377598+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "kwaixiaodian-Setup-1.1.4.exe",
+          "Arguments": [
+            "/S",
+            "/D=E:\\TempSoftware\\Kuaiyu"
+          ],
+          "UnquotedFinalArgument": true,
+          "Started": "2026-10-15T17:00:17.3879706+08:00",
+          "Finished": "2026-10-15T17:00:19.7323423+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "快语客服工作台 1.1.4",
+          "DisplayVersion": "1.1.4",
+          "InstallLocation": null,
+          "DisplayIcon": "E:\\TempSoftware\\Kuaiyu\\uninstallerIcon.ico",
+          "UninstallString": "\"E:\\TempSoftware\\Kuaiyu\\Uninstall 快语客服工作台.exe\" /allusers"
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": true,
+  "SystemInventoryErrors": null
+}

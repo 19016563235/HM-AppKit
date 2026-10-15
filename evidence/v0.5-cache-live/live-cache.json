@@ -1,0 +1,36 @@
+{
+  "Operation": "Production provider download/cache validation only; no installer execution",
+  "AppId": "dewu",
+  "LibraryRoot": "%PROJECT_ROOT%\\artifacts\\HM-AppKit\\v0.5\\win-x64\\Local Installer",
+  "Attempts": [
+    {
+      "Pass": 1,
+      "Path": "%PROJECT_ROOT%\\artifacts\\HM-AppKit\\v0.5\\win-x64\\Local Installer\\dewu\\package-[cache-id]\\\u5F97\u7269\u5546\u5BB6\u5BA2\u670D3.0.exe",
+      "Sha256": "515D125AB6361655AB52B67ECC906C375C091300959B8F6F43554EF6427F59CD",
+      "Version": "6.2.0",
+      "Publisher": "\u4E0A\u6D77\u5F97\u7269\u4FE1\u606F\u96C6\u56E2\u6709\u9650\u516C\u53F8",
+      "IsCached": true,
+      "LatestConfirmed": true,
+      "Bytes": 9907720,
+      "ExistsAfterDispose": true,
+      "SamePathAsFirst": true,
+      "Started": "2026-10-15T18:07:48.7275175+08:00",
+      "Finished": "2026-10-15T18:07:49.3963251+08:00"
+    },
+    {
+      "Pass": 2,
+      "Path": "%PROJECT_ROOT%\\artifacts\\HM-AppKit\\v0.5\\win-x64\\Local Installer\\dewu\\package-[cache-id]\\\u5F97\u7269\u5546\u5BB6\u5BA2\u670D3.0.exe",
+      "Sha256": "515D125AB6361655AB52B67ECC906C375C091300959B8F6F43554EF6427F59CD",
+      "Version": "6.2.0",
+      "Publisher": "\u4E0A\u6D77\u5F97\u7269\u4FE1\u606F\u96C6\u56E2\u6709\u9650\u516C\u53F8",
+      "IsCached": true,
+      "LatestConfirmed": true,
+      "Bytes": 9907720,
+      "ExistsAfterDispose": true,
+      "SamePathAsFirst": true,
+      "Started": "2026-10-15T18:07:49.3998083+08:00",
+      "Finished": "2026-10-15T18:07:49.4805587+08:00"
+    }
+  ],
+  "Error": null
+}

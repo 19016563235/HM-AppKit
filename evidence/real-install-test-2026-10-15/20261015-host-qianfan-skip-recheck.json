@@ -1,0 +1,57 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-qianfan-skip-recheck",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-qianfan-skip-recheck\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:56:50.0703662+08:00",
+  "Finished": "2026-10-15T16:56:50.1550272+08:00",
+  "CatalogSha256": "73E7259BF29F7E8018551BBD5049EBE1EC6B68DBB88AC93DBC1CC6D075F69793",
+  "Applications": [
+    {
+      "Id": "qianfan",
+      "Name": "千帆客服工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Qianfan",
+      "State": "AlreadyInstalled",
+      "Message": "已安装于 E:\\TempSoftware\\Qianfan；已跳过，未迁移目录",
+      "Started": "2026-10-15T16:56:50.1157832+08:00",
+      "Finished": "2026-10-15T16:56:50.1375883+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Qianfan"
+      ],
+      "FileCountAtLeast": 76,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Qianfan\\Uninstall 千帆客服工作台.exe",
+          "Bytes": 396923,
+          "FileVersion": "1.2.6"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianfan\\千帆客服工作台.exe",
+          "Bytes": 186426368,
+          "FileVersion": "1.2.6"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianfan\\resources\\elevate.exe",
+          "Bytes": 107520,
+          "FileVersion": "1, 0, 0, 2894"
+        }
+      ],
+      "Payload": null,
+      "InstallerProcesses": [],
+      "UninstallEntries": [
+        {
+          "DisplayName": "千帆客服工作台 1.2.6",
+          "DisplayVersion": "1.2.6",
+          "InstallLocation": null,
+          "DisplayIcon": "E:\\TempSoftware\\Qianfan\\uninstallerIcon.ico",
+          "UninstallString": "\"E:\\TempSoftware\\Qianfan\\Uninstall 千帆客服工作台.exe\" /currentuser"
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}

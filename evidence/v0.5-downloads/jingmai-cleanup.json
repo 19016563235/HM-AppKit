@@ -1,0 +1,169 @@
+{
+  "CheckedAt": "2026-10-15T18:09:02.753652+08:00",
+  "BeforeSnapshot": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\HM-AppKit-v05-jingmai-before\\host-installed.json",
+  "CleanedSnapshot": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\HM-AppKit-v05-jingmai-cleaned\\host-installed.json",
+  "BeforeCreated": "2026-10-15T18:02:00.5094971+08:00",
+  "CleanedCreated": "2026-10-15T18:07:09.0739563+08:00",
+  "Services": {
+    "Added": [],
+    "Removed": [],
+    "ExistingChanged": [
+      {
+        "Before": {
+          "Name": "BITS",
+          "PathName": "C:\\Windows\\System32\\svchost.exe -k netsvcs -p",
+          "State": "Stopped",
+          "StartMode": "Manual"
+        },
+        "After": {
+          "Name": "BITS",
+          "PathName": "C:\\Windows\\System32\\svchost.exe -k netsvcs -p",
+          "State": "Running",
+          "StartMode": "Auto"
+        }
+      },
+      {
+        "Before": {
+          "Name": "wmiApSrv",
+          "PathName": "C:\\Windows\\system32\\wbem\\WmiApSrv.exe",
+          "State": "Stopped",
+          "StartMode": "Manual"
+        },
+        "After": {
+          "Name": "wmiApSrv",
+          "PathName": "C:\\Windows\\system32\\wbem\\WmiApSrv.exe",
+          "State": "Running",
+          "StartMode": "Manual"
+        }
+      }
+    ]
+  },
+  "Drivers": {
+    "Added": [],
+    "Removed": [],
+    "ExistingChanged": []
+  },
+  "ScheduledTasks": {
+    "Added": [],
+    "Removed": [],
+    "ExistingChanged": []
+  },
+  "UninstallRegistry": {
+    "Added": [],
+    "Removed": [],
+    "ExistingChanged": []
+  },
+  "OriginalFourApps": [
+    {
+      "Id": "feishu",
+      "SameAppRecords": true,
+      "DetectedBefore": true,
+      "DetectedAfter": true,
+      "Records": [
+        {
+          "DisplayName": "飞书",
+          "InstallLocation": "D:\\Software\\Feishu",
+          "RegistryKey": "CurrentUser/Registry64/Feishu",
+          "LocationEvidence": "DisplayIcon（已核对文件存在）"
+        }
+      ],
+      "Versions": [
+        {
+          "Key": "CurrentUser/Registry64/Feishu",
+          "VersionBefore": "8.1.17",
+          "VersionAfter": "8.1.17",
+          "SameRegistryRecord": true
+        }
+      ]
+    },
+    {
+      "Id": "weixin",
+      "SameAppRecords": true,
+      "DetectedBefore": true,
+      "DetectedAfter": true,
+      "Records": [
+        {
+          "DisplayName": "微信",
+          "InstallLocation": "D:\\Software\\Tencent\\Weixin",
+          "RegistryKey": "LocalMachine/Registry32/Weixin",
+          "LocationEvidence": "InstallLocation"
+        }
+      ],
+      "Versions": [
+        {
+          "Key": "LocalMachine/Registry32/Weixin",
+          "VersionBefore": "4.1.15.13",
+          "VersionAfter": "4.1.15.13",
+          "SameRegistryRecord": true
+        }
+      ]
+    },
+    {
+      "Id": "todesk",
+      "SameAppRecords": true,
+      "DetectedBefore": true,
+      "DetectedAfter": true,
+      "Records": [
+        {
+          "DisplayName": "ToDesk",
+          "InstallLocation": "D:\\Software\\ToDesk",
+          "RegistryKey": "LocalMachine/Registry32/ToDesk",
+          "LocationEvidence": "DisplayIcon（已核对文件存在）"
+        }
+      ],
+      "Versions": [
+        {
+          "Key": "LocalMachine/Registry32/ToDesk",
+          "VersionBefore": "5.1.0.0",
+          "VersionAfter": "5.1.0.0",
+          "SameRegistryRecord": true
+        }
+      ]
+    },
+    {
+      "Id": "jianying",
+      "SameAppRecords": true,
+      "DetectedBefore": true,
+      "DetectedAfter": true,
+      "Records": [
+        {
+          "DisplayName": "剪映专业版",
+          "InstallLocation": "D:\\Software\\JianyingPro",
+          "RegistryKey": "CurrentUser/Registry64/JianyingPro",
+          "LocationEvidence": "DisplayIcon（已核对文件存在）"
+        }
+      ],
+      "Versions": [
+        {
+          "Key": "CurrentUser/Registry64/JianyingPro",
+          "VersionBefore": "11.5.0.14471",
+          "VersionAfter": "11.5.0.14471",
+          "SameRegistryRecord": true
+        }
+      ]
+    }
+  ],
+  "ConfirmedNewPathsAfterCleanup": [
+    {
+      "Path": "E:\\TempSoftware\\Jingmai",
+      "Exists": false
+    },
+    {
+      "Path": "C:\\Program Files (x86)\\JdHostsafe",
+      "Exists": false
+    },
+    {
+      "Path": "%USERPROFILE%\\AppData\\Local\\Temp\\HM-AppKit-Jingmai\\[stage-id]",
+      "Exists": false
+    }
+  ],
+  "OriginalFourUnchanged": true,
+  "AddedServicesDriversTasksCount": 0,
+  "ApplicationCleanupVerified": true,
+  "Notes": [
+    "Official Jingmai and JdHostsafe uninstallers were run by root; this auditor performed reads only.",
+    "No added or removed ARP entries, services, drivers or scheduled tasks remain.",
+    "Two pre-existing Windows services differ: BITS Stopped/Manual -> Running/Auto; wmiApSrv Stopped/Manual -> Running/Manual. The snapshots alone cannot attribute these changes to Jingmai rather than concurrent Windows activity. No service settings were modified by this auditor.",
+    "No unrelated existing user JD data was inspected for deletion or modified."
+  ]
+}

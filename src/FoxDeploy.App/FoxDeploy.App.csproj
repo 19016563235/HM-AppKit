@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>HM AppKit</AssemblyName>
+    <RootNamespace>FoxDeploy.App</RootNamespace>
+    <Version>0.5.0</Version>
+    <Title>HM AppKit</Title>
+    <Description>按岗位批量安装 Windows 应用</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/HM-AppKit.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FoxDeploy.Core/FoxDeploy.Core.csproj" />
+    <Content Include="../../catalog/catalog.json" Link="Data/catalog.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="../../catalog/catalog.json" LogicalName="FoxDeploy.catalog.json" />
+    <Resource Include="Assets/AppIcons/*.png" />
+    <Resource Include="Assets/HM-AppKit.png" />
+    <Resource Include="Assets/HM-AppKit.ico" />
+  </ItemGroup>
+</Project>

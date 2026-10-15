@@ -1,0 +1,527 @@
+[
+  {
+    "Id": "feishu",
+    "Name": "飞书",
+    "Category": "公共",
+    "Description": "团队沟通、文档与协作办公",
+    "PackageId": "ByteDance.Feishu",
+    "FolderName": "Feishu",
+    "SourceUrl": "https://www.feishu.cn/download",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "Feishu",
+      "飞书"
+    ],
+    "Notes": "从 Microsoft WinGet 清单解析版本、官网链接及 SHA-256，下载厂商原包并缓存；静默和目录参数固定核验。",
+    "OnlineInstaller": {
+      "WingetManifestPath": "b/ByteDance/Feishu",
+      "SilentSupported": true,
+      "InstallLocationArgument": "--target_dir={InstallDirectory}",
+      "SilentArguments": [
+        "--command=quiet_install"
+      ],
+      "AllowedDownloadHosts": [
+        "sf3-cn.feishucdn.com",
+        "sf1-cn.feishucdn.com",
+        "sf6-cn.feishucdn.com"
+      ],
+      "InteractiveArguments": [],
+      "InstallerType": "exe",
+      "LocationSupported": true,
+      "AllowedPublishers": [
+        "Beijing Feishu Technology Co.,Ltd."
+      ]
+    }
+  },
+  {
+    "Id": "weixin",
+    "Name": "微信",
+    "Category": "公共",
+    "Description": "微信 Windows 4.x 客户端",
+    "PackageId": "Tencent.WeChat.Universal",
+    "FolderName": "Weixin",
+    "SourceUrl": "https://pc.weixin.qq.com/",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "Weixin",
+      "WeChat",
+      "微信"
+    ],
+    "Notes": "缓存微信 4.x 厂商原包，使用 NSIS /S 和 /D 参数；聊天记录目录需在微信内另设。",
+    "OnlineInstaller": {
+      "WingetManifestPath": "t/Tencent/WeChat/Universal",
+      "SilentSupported": true,
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "SilentArguments": [
+        "/S"
+      ],
+      "AllowedDownloadHosts": [
+        "dldir1v6.qq.com",
+        "dldir1.qq.com"
+      ],
+      "InteractiveArguments": [],
+      "InstallerType": "nsis",
+      "LocationSupported": true,
+      "AllowedPublishers": [
+        "Tencent Technology (Shenzhen) Company Limited"
+      ]
+    }
+  },
+  {
+    "Id": "todesk",
+    "Name": "ToDesk",
+    "Category": "公共",
+    "Description": "远程协助与远程桌面",
+    "PackageId": "Youqu.ToDesk",
+    "FolderName": "ToDesk",
+    "SourceUrl": "https://www.todesk.com/download.html",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "ToDesk"
+    ],
+    "Notes": "从官网稳定版下载入口获取当前安装包并保存；使用已核验的 NSIS /S 和 /D 参数。已安装直接跳过，远程访问需自行配置。",
+    "OnlineInstaller": {
+      "SilentSupported": true,
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "SilentArguments": [
+        "/S"
+      ],
+      "UrlPattern": "win_link:\"(?<url>https[^\"]+)\"",
+      "AllowedDownloadHosts": [
+        "www.todesk.com",
+        "dl.todesk.com"
+      ],
+      "InteractiveArguments": [],
+      "InstallerType": "nsis",
+      "LocationSupported": true,
+      "MetadataUrl": "https://www.todesk.com/download.html",
+      "AllowedPublishers": [
+        "Hainan YouQu Technology Co., Ltd"
+      ]
+    }
+  },
+  {
+    "Id": "qianniu",
+    "Name": "千牛工作台",
+    "Category": "运营",
+    "Description": "淘宝、天猫商家经营与旺旺客服",
+    "PackageId": "Alibaba.AliWorkbench",
+    "FolderName": "Qianniu",
+    "SourceUrl": "https://work.taobao.com/download.html",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "千牛工作台",
+      "千牛",
+      "AliWorkbench"
+    ],
+    "Notes": "官网 9.97.74N 已实测在线下载、静默安装到指定目录及卸载；本地 9.95.01N 参数仅静态核验。",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "LocalInstaller": {
+      "FileName": "qianniu_(9.95.01N)_NK_64.exe",
+      "Sha256": "E281B983FBD2584ADD5D460761AFA009B9BC2B7D559ACEACF44042B9455BCDE0",
+      "InstallerType": "exe",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "TAOBAO (CHINA) SOFTWARE CO.,LTD."
+      ]
+    },
+    "OnlineInstaller": {
+      "InstallerType": "exe",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "TAOBAO (CHINA) SOFTWARE CO.,LTD."
+      ],
+      "MetadataUrl": "https://pc.work.taobao.com/version/getOfficialVersion",
+      "UrlPattern": "\"downloadUrl64New\"\\s*:\\s*\"(?<url>https://[^\"\\r\\n]+)\"",
+      "AllowedDownloadHosts": [
+        "pc.work.taobao.com",
+        "download.alicdn.com"
+      ]
+    }
+  },
+  {
+    "Id": "doudian",
+    "Name": "抖店工作台",
+    "Category": "运营",
+    "Description": "抖音商家经营与飞鸽消息接待",
+    "PackageId": "ByteDance.Doudian",
+    "FolderName": "Doudian",
+    "SourceUrl": "https://jinritemai.com/",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "抖店工作台",
+      "doudian"
+    ],
+    "Notes": "官网 1.1.12 已实测在线下载、静默安装到指定目录及卸载；厂商会在目标下增加应用子目录。",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "LocalInstaller": {
+      "FileName": "doudian_v1.1.7_x64.exe",
+      "Sha256": "3DF9F29F1F0B88336935DACA7206FF6387AC1D16F14359FFA3A20F8F2FA9B6B8",
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "Douyin Vision Co., Ltd."
+      ]
+    },
+    "OnlineInstaller": {
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "Douyin Vision Co., Ltd."
+      ],
+      "MetadataUrl": "https://tron.jiyunhudong.com/api/sdk/check_update?pid=7005992474254514440&branch=master&buildId=&uid=",
+      "UrlPattern": "\"downloadUrlX64\"\\s*:\\s*\"(?<url>https://[^\"\\r\\n]+)\"",
+      "AllowedDownloadHosts": [
+        "tron.jiyunhudong.com",
+        "lf3-cdn-tos.bytescm.com"
+      ]
+    }
+  },
+  {
+    "Id": "jingmai",
+    "PackageId": "",
+    "SilentSupported": false,
+    "LocationSupported": true,
+    "Name": "京麦工作台",
+    "Category": "运营",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "Description": "京东商家经营与咚咚客服",
+    "FolderName": "Jingmai",
+    "SourceUrl": "https://jm.jd.com/index/index.html",
+    "RegistryNames": [
+      "京麦",
+      "JdWorkStation"
+    ],
+    "LocalInstaller": {
+      "FileName": "JdWorkStationSetup13.4.6.exe",
+      "Sha256": "32216C6D8435F4CFA49EC15EB4840B4E9A68C1EE840241D262089356F45A74A9",
+      "InstallerType": "nsis",
+      "SilentSupported": false,
+      "LocationSupported": true,
+      "SilentArguments": [],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "北京京东尚科信息技术有限公司"
+      ],
+      "Adapter": "jingmai",
+      "InteractiveFallback": true
+    },
+    "OnlineInstaller": {
+      "InstallerType": "nsis",
+      "SilentSupported": false,
+      "LocationSupported": true,
+      "SilentArguments": [],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "北京京东尚科信息技术有限公司"
+      ],
+      "MetadataUrl": "https://jm.jd.com/homeVersionUpgradeNewServlet?platform=pc",
+      "UrlPattern": "\"downloadUrl\"\\s*:\\s*\"(?<url>https://[^\"\\r\\n]+)\"",
+      "AllowedDownloadHosts": [
+        "jm.jd.com",
+        "s.360buyimg.com",
+        "storage.jd.com"
+      ],
+      "Adapter": "jingmai",
+      "InteractiveFallback": true
+    },
+    "Notes": "官方两阶段安装器未确认完整静默支持；自动打开官方常规安装向导并预填所选目录，安装后核对实际位置。"
+  },
+  {
+    "Id": "pinduoduo",
+    "PackageId": "",
+    "SilentSupported": false,
+    "LocationSupported": false,
+    "Name": "拼多多商家工作台",
+    "Category": "运营",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "Description": "拼多多店铺经营与客服接待",
+    "FolderName": "Pinduoduo",
+    "SourceUrl": "https://mms.pinduoduo.com/",
+    "RegistryNames": [
+      "拼多多商家工作台"
+    ],
+    "LocalInstaller": {
+      "FileName": "PddSetup_V3.6.8.3_Build20260629131411_Final.exe",
+      "Sha256": "E061AF956E4CD79FB8DCCD74FF5020DF0C24D6E0BE163B4684F081891E73E539",
+      "InstallerType": "exe",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/slient"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/installpath={InstallDirectory}",
+      "AllowedPublishers": [
+        "上海寻梦信息技术有限公司"
+      ],
+      "RequiresExistingTargetDirectory": true
+    },
+    "OnlineInstaller": {
+      "InstallerType": "exe",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/slient"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/installpath={InstallDirectory}",
+      "AllowedPublishers": [
+        "上海寻梦信息技术有限公司"
+      ],
+      "DownloadUrl": "https://meta.pinduoduo.com/api/one/app/v1/lateststable?appId=com.xunmeng.workbench&platform=windows&subType=main",
+      "AllowedDownloadHosts": [
+        "meta.pinduoduo.com",
+        "cd.pddpic.com"
+      ],
+      "RequiresExistingTargetDirectory": true
+    },
+    "Notes": "官网 3.7.3.7 已实测通过；安装前必须创建目标目录，否则厂商忽略 /installpath 并回退 C 盘。使用厂商拼写 /slient。"
+  },
+  {
+    "Id": "qianfan",
+    "PackageId": "",
+    "SilentSupported": false,
+    "LocationSupported": false,
+    "Name": "千帆客服工作台",
+    "Category": "运营",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "Description": "小红书商家客服与订单协作",
+    "FolderName": "Qianfan",
+    "SourceUrl": "https://walle.xiaohongshu.com/client-update/",
+    "RegistryNames": [
+      "千帆客服工作台",
+      "小红书工作台"
+    ],
+    "LocalInstaller": {
+      "FileName": "千帆客服工作台_setup_1.2.6.exe",
+      "Sha256": "AB519D23916DF056BEF746840559A9D2AB8907E645C08894B020B18B45B40D91",
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "行吟信息科技（武汉）有限公司"
+      ]
+    },
+    "OnlineInstaller": {
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "行吟信息科技（武汉）有限公司"
+      ],
+      "MetadataUrl": "https://walle.xiaohongshu.com/client-update/latest_beta_win.yml",
+      "UrlPattern": "(?m)^path:\\s*(?<url>[^\\r\\n]+)",
+      "RequestHeaders": {
+        "x-system-platform": "windows",
+        "x-system-arch": "x64",
+        "x-system-version": "windows11",
+        "x-system-version-code": "10.0.26100"
+      },
+      "AllowedDownloadHosts": [
+        "walle.xiaohongshu.com",
+        "eva-static.xhscdn.com"
+      ]
+    },
+    "Notes": "官网 1.2.6 已实测在线下载、静默指定目录及卸载；已支持识别安装记录名称后的版本号，避免重复安装。"
+  },
+  {
+    "Id": "kuaiyu",
+    "PackageId": "",
+    "SilentSupported": false,
+    "LocationSupported": false,
+    "Name": "快语客服工作台",
+    "Category": "运营",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "Description": "快手小店经营与客服消息接待",
+    "FolderName": "Kuaiyu",
+    "SourceUrl": "https://im.kwaixiaodian.com/",
+    "RegistryNames": [
+      "快语客服工作台",
+      "快小店商家客户端"
+    ],
+    "LocalInstaller": {
+      "FileName": "kwaixiaodian-Setup-1.0.3.1539.exe",
+      "Sha256": "894477622F5DC04FF643C597AABE60DE119B9C7C041B6E711B84CCA5A63FA6FC",
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "Beijing Kuaishou Technology Co., Ltd."
+      ]
+    },
+    "OnlineInstaller": {
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "Beijing Kuaishou Technology Co., Ltd.",
+        "北京快手科技有限公司"
+      ],
+      "MetadataUrl": "https://im.kwaixiaodian.com/",
+      "UrlPattern": "\"windowsUrl\"\\s*:\\s*\"(?<url>https://[^\"\\r\\n]+)\"",
+      "AllowedDownloadHosts": [
+        "im.kwaixiaodian.com",
+        "p5-ec.ecukwai.com",
+        "p5-ec.eckwai.com"
+      ]
+    },
+    "Notes": "官网 1.1.4 已实测在线下载、静默指定目录及卸载；仅允许核验过的快手中文或英文签名主体。"
+  },
+  {
+    "Id": "dewu",
+    "PackageId": "",
+    "SilentSupported": false,
+    "LocationSupported": false,
+    "Name": "得物商家客服",
+    "Category": "运营",
+    "Roles": [
+      "运营",
+      "客服"
+    ],
+    "Description": "得物商家售前售后客服工作台",
+    "FolderName": "Dewu",
+    "SourceUrl": "https://h5static.dewu.com/mcs-platform-latest/updater_windows.json",
+    "RegistryNames": [
+      "得物商家客服3.0",
+      "得物商家客服"
+    ],
+    "LocalInstaller": {
+      "FileName": "得物商家客服3.0.exe",
+      "Sha256": "AC33B1151E1993F1AEAB41F19E632BA504A7532BBBF5EB54C7E7F36531E7E1E2",
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "上海得物信息集团有限公司"
+      ]
+    },
+    "OnlineInstaller": {
+      "InstallerType": "nsis",
+      "SilentSupported": true,
+      "LocationSupported": true,
+      "SilentArguments": [
+        "/S"
+      ],
+      "InteractiveArguments": [],
+      "InstallLocationArgument": "/D={InstallDirectory}",
+      "AllowedPublishers": [
+        "上海得物信息集团有限公司"
+      ],
+      "DownloadUrl": "https://h5static.dewu.com/mcs-platform-latest/得物商家客服3.0.exe",
+      "AllowedDownloadHosts": [
+        "h5static.dewu.com"
+      ]
+    },
+    "Notes": "官网 6.2.0 已实测在线下载、静默指定目录及卸载；WebView2 依赖由厂商管理。"
+  },
+  {
+    "Id": "jianying",
+    "Name": "剪映专业版",
+    "Category": "短视频",
+    "Description": "短视频剪辑与内容制作",
+    "PackageId": "ByteDance.JianyingPro",
+    "FolderName": "JianyingPro",
+    "SourceUrl": "https://www.capcut.cn/",
+    "SilentSupported": true,
+    "LocationSupported": true,
+    "RegistryNames": [
+      "JianyingPro",
+      "剪映专业版"
+    ],
+    "Notes": "从 Microsoft WinGet 清单解析当前版本及校验值，缓存厂商原包；草稿、素材与缓存需在剪映内另设。",
+    "OnlineInstaller": {
+      "WingetManifestPath": "b/ByteDance/JianyingPro",
+      "SilentSupported": true,
+      "InstallLocationArgument": "/install_path={InstallDirectory}",
+      "SilentArguments": [
+        "/silent_install=1"
+      ],
+      "AllowedDownloadHosts": [
+        "lf3-package.vlabstatic.com",
+        "lf6-package.vlabstatic.com",
+        "lf9-package.vlabstatic.com"
+      ],
+      "InteractiveArguments": [],
+      "InstallerType": "exe",
+      "LocationSupported": true,
+      "AllowedPublishers": [
+        "深圳市脸萌科技有限公司"
+      ]
+    }
+  }
+]

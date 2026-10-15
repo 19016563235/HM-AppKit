@@ -1,0 +1,70 @@
+{
+  "VerifiedAt": "2026-10-15T17:06:31.0910201+08:00",
+  "AddedUninstallEntryCount": 0,
+  "ChangedUninstallEntryCount": 0,
+  "RemovedBaselineUninstallEntryCount": 0,
+  "AllOriginalApplicationsUnchanged": true,
+  "OriginalApplications": [
+    {
+      "Id": "feishu",
+      "Name": "飞书",
+      "SameVersionAndLocation": true
+    },
+    {
+      "Id": "weixin",
+      "Name": "微信",
+      "SameVersionAndLocation": true
+    },
+    {
+      "Id": "todesk",
+      "Name": "ToDesk",
+      "SameVersionAndLocation": true
+    },
+    {
+      "Id": "jianying",
+      "Name": "剪映专业版",
+      "SameVersionAndLocation": true
+    }
+  ],
+  "TestTargets": [
+    {
+      "Path": "E:\\TempSoftware\\Qianniu",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Doudian",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Jingmai",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Pinduoduo",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Qianfan",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Kuaiyu",
+      "Exists": false
+    },
+    {
+      "Path": "E:\\TempSoftware\\Dewu",
+      "Exists": false
+    }
+  ],
+  "TestProcesses": [],
+  "AlibabaProtectServices": [],
+  "NewAlibabaDrivers": [],
+  "AliUpdaterTaskCount": 0,
+  "AlibabaProtectDirectoryExists": false,
+  "AliPaladinFileExists": false,
+  "WrongCDrivePddDirectoryExists": false,
+  "SandboxFeatureState": "Disabled",
+  "ExistingTodeskTestRootPreserved": true,
+  "ExistingAndroidDewuShortcutPreserved": true,
+  "Notes": "Verified uninstall entries, target files, running test processes and identified new services/drivers/tasks. Original logs and pre-existing software were preserved. No reboot performed."
+}

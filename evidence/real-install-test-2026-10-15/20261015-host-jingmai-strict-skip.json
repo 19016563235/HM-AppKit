@@ -1,0 +1,22 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-jingmai-strict-skip",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-jingmai-strict-skip\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T17:02:18.0938239+08:00",
+  "Finished": "2026-10-15T17:02:22.579753+08:00",
+  "CatalogSha256": "73E7259BF29F7E8018551BBD5049EBE1EC6B68DBB88AC93DBC1CC6D075F69793",
+  "Applications": [
+    {
+      "Id": "jingmai",
+      "Name": "京麦工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Jingmai",
+      "State": "Skipped",
+      "Message": "京麦工作台 的此来源未确认支持静默安装，请取消静默选项后重试。",
+      "Payload": null,
+      "Processes": []
+    }
+  ],
+  "SystemInventoryCaptured": true
+}

@@ -1,0 +1,117 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-qianniu",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-qianniu\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:44:00.836003+08:00",
+  "Finished": "2026-10-15T16:44:21.2658996+08:00",
+  "CatalogSha256": "B615908125134159B83D52300C906D6E666E0D4B1E7FCBFE39E74C9F1AF137E5",
+  "Applications": [
+    {
+      "Id": "qianniu",
+      "Name": "千牛工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Qianniu",
+      "State": "Succeeded",
+      "Message": "已核对系统安装记录与目录：E:\\TempSoftware\\Qianniu",
+      "Started": "2026-10-15T16:44:00.8802827+08:00",
+      "Finished": "2026-10-15T16:44:21.217875+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Qianniu"
+      ],
+      "FileCountAtLeast": 1026,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\AliWorkbench.exe",
+          "Bytes": 516096,
+          "FileVersion": ""
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\AliWorkbenchTask.exe",
+          "Bytes": 311296,
+          "FileVersion": ""
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\Uninstall.exe",
+          "Bytes": 2866688,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\AliRender.exe",
+          "Bytes": 96256,
+          "FileVersion": ""
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\AliWorkBenchAssist.exe",
+          "Bytes": 46592,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\AliWorkbenchHelper.exe",
+          "Bytes": 336360,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\arphaCrashReport64.exe",
+          "Bytes": 258560,
+          "FileVersion": ""
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\windmillworker.exe",
+          "Bytes": 25600,
+          "FileVersion": null
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\WWCmd.exe",
+          "Bytes": 64512,
+          "FileVersion": "7.3.0.1"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Qianniu\\9.97.74N\\SafeGuard\\AlibabaProtectCon.exe",
+          "Bytes": 1870384,
+          "FileVersion": ""
+        }
+      ],
+      "Payload": {
+        "FileName": "qianniu_(9.97.74N)_NK_64.exe",
+        "Bytes": 226814184,
+        "Sha256": "BB9A5019521327177C68341EB9B5DC186E847395CA1FDC53972197FF2A35077A",
+        "FileVersion": null,
+        "ProductVersion": null,
+        "VerifiedPublisher": "TAOBAO (CHINA) SOFTWARE CO.,LTD.",
+        "MetadataUrl": "https://pc.work.taobao.com/version/getOfficialVersion",
+        "DownloadUrl": "",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T16:44:07.6599151+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "qianniu_(9.97.74N)_NK_64.exe",
+          "Arguments": [
+            "/S",
+            "/D=E:\\TempSoftware\\Qianniu"
+          ],
+          "UnquotedFinalArgument": false,
+          "Started": "2026-10-15T16:44:07.6667556+08:00",
+          "Finished": "2026-10-15T16:44:21.2059331+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "千牛工作台",
+          "DisplayVersion": "9.97.74N",
+          "InstallLocation": "E:\\TempSoftware\\Qianniu",
+          "DisplayIcon": "E:\\TempSoftware\\Qianniu\\Uninstall.exe",
+          "UninstallString": "E:\\TempSoftware\\Qianniu\\Uninstall.exe"
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}

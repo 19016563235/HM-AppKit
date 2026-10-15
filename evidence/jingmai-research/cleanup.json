@@ -1,0 +1,18 @@
+{
+  "VerifiedAt": "2026-10-15T17:32:46.7009054+08:00",
+  "AddedUninstallEntryCount": 0,
+  "ChangedUninstallEntryCount": 0,
+  "RemovedUninstallEntryCount": 0,
+  "OriginalApplicationsUnchanged": true,
+  "TargetDirectoryExists": false,
+  "TrialStageExists": false,
+  "DownloadedTrialInstallerExists": false,
+  "NewServices": [],
+  "NewDrivers": [],
+  "NewTasks": [],
+  "StageProcesses": [],
+  "JmAppPathExists": false,
+  "JmAccountAppPathExists": false,
+  "FullInstallationCompleted": false,
+  "Notes": "No complete installation was created. Trial processes, partial files, downloaded research copy and two newly created empty App Paths keys were removed. A UUID preference without a pre-trial baseline was preserved."
+}

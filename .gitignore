@@ -426,3 +426,56 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# HM AppKit project rules
+# Build output and editor state
+**/[Bb]in/
+**/[Oo]bj/
+.vs/
+.idea/
+.vscode/
+artifacts/
+**/[Tt]est[Rr]esults/
+*.user
+*.suo
+*.zip
+*.7z
+*.exe
+*.dll
+*.msi
+*.msix
+*.msixbundle
+*.appinstaller
+
+# Downloaded installers, runtime preferences and logs
+**/Local Installer/
+**/LocalInstaller/
+**/[Ll]ogs/
+**/settings.json
+**/settings.*.json
+*.log
+
+# Credentials and signing material
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pfx
+*.p12
+*.pem
+*.key
+*.pvk
+*.p8
+*.pk8
+*.ppk
+*.snk
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# The two reviewed 7-Zip binaries are source dependencies, not installers.
+# Retain these exceptions when merging with a Visual Studio ignore template.
+!src/FoxDeploy.Core/Native/7zip/7z.exe
+!src/FoxDeploy.Core/Native/7zip/7z.dll

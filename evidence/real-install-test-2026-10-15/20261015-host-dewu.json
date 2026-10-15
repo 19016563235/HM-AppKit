@@ -1,0 +1,82 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-dewu",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-dewu\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T17:00:45.4977763+08:00",
+  "Finished": "2026-10-15T17:00:50.9729723+08:00",
+  "CatalogSha256": "73E7259BF29F7E8018551BBD5049EBE1EC6B68DBB88AC93DBC1CC6D075F69793",
+  "Applications": [
+    {
+      "Id": "dewu",
+      "Name": "得物商家客服",
+      "RequestedDirectory": "E:\\TempSoftware\\Dewu",
+      "State": "Succeeded",
+      "Message": "已核对系统安装记录与目录：E:\\TempSoftware\\Dewu",
+      "Started": "2026-10-15T17:00:47.3846901+08:00",
+      "Finished": "2026-10-15T17:00:49.0089574+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": true,
+      "EffectiveLocations": [
+        "E:\\TempSoftware\\Dewu"
+      ],
+      "FileCountAtLeast": 3,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Dewu\\ScreenCapture.exe",
+          "Bytes": 3931320,
+          "FileVersion": "2.1.10.0"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Dewu\\uninstall.exe",
+          "Bytes": 151704,
+          "FileVersion": "6.2.0"
+        },
+        {
+          "Path": "E:\\TempSoftware\\Dewu\\得物商家客服3.0.exe",
+          "Bytes": 19475272,
+          "FileVersion": "6.2.0"
+        }
+      ],
+      "Payload": {
+        "FileName": "得物商家客服3.0.exe",
+        "Bytes": 9907720,
+        "Sha256": "515D125AB6361655AB52B67ECC906C375C091300959B8F6F43554EF6427F59CD",
+        "FileVersion": "6.2.0",
+        "ProductVersion": "6.2.0",
+        "VerifiedPublisher": "上海得物信息集团有限公司",
+        "MetadataUrl": "",
+        "DownloadUrl": "https://h5static.dewu.com/mcs-platform-latest/得物商家客服3.0.exe",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T17:00:48.1181555+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "得物商家客服3.0.exe",
+          "Arguments": [
+            "/S",
+            "/D=E:\\TempSoftware\\Dewu"
+          ],
+          "UnquotedFinalArgument": true,
+          "Started": "2026-10-15T17:00:48.126677+08:00",
+          "Finished": "2026-10-15T17:00:48.995866+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": [
+        {
+          "DisplayName": "得物商家客服3.0",
+          "DisplayVersion": "6.2.0",
+          "InstallLocation": "\"E:\\TempSoftware\\Dewu\"",
+          "DisplayIcon": "\"E:\\TempSoftware\\Dewu\\得物商家客服3.0.exe\"",
+          "UninstallString": "\"E:\\TempSoftware\\Dewu\\uninstall.exe\""
+        }
+      ]
+    }
+  ],
+  "SystemInventoryCaptured": true,
+  "SystemInventoryErrors": null
+}

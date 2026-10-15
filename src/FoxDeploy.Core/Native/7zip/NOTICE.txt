@@ -1,0 +1,24 @@
+HM AppKit uses the unmodified 7z.exe and 7z.dll from 7-Zip 26.04 (Windows x64)
+to extract the verified Jingmai NSIS installer without executing its bootstrapper.
+
+7-Zip Copyright (C) 1999-2026 Igor Pavlov.
+7-Zip is licensed under the GNU LGPL; parts of 7z.dll also carry the BSD licenses
+and unRAR restriction described in the accompanying 7zip-license.txt / License.txt.
+
+Official project, source code and full license information:
+https://www.7-zip.org/
+https://www.7-zip.org/download.html
+https://www.7-zip.org/license.txt
+https://www.7-zip.org/faq.html
+Exact corresponding release and source:
+https://github.com/ip7z/7zip/releases/tag/26.04
+https://github.com/ip7z/7zip/releases/download/26.04/7z2604-src.7z
+
+Original Windows x64 distribution:
+https://github.com/ip7z/7zip/releases/download/26.04/7z2604-x64.exe
+
+Bundled file SHA-256:
+7z.exe 95FFF19B73EFF77C87C0D7BD32822E43FB90DD2932459F962EB532D8DFB6BA53
+7z.dll 899CD73D7FC60E1C1C35C7DE0F5BED3DC69BFE2CECBD48014D868A347970A0B1
+
+No changes have been made to either 7-Zip binary.

@@ -1,0 +1,67 @@
+name: Publish HM AppKit v0.5
+
+on:
+  push:
+    tags: [v0.5]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/tags/v0.5'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Test and build Windows x64 package
+        run: ./scripts/Build.ps1
+      - name: Verify package and write SHA-256
+        run: |
+          $package = 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip'
+          $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $package).Path)
+          try {
+            $programs = @($archive.Entries | Where-Object FullName -match '\.(exe|msi)$' | ForEach-Object FullName)
+            if ($programs.Count -ne 1 -or $programs[0] -ne 'HM AppKit.exe') {
+              throw 'The release must contain only HM AppKit.exe, without vendor installers.'
+            }
+            if (@($archive.Entries | Where-Object FullName -match '(^|/)Local Installer/').Count -gt 0) {
+              throw 'The installer cache must not be distributed.'
+            }
+          } finally { $archive.Dispose() }
+          $hash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  HM-AppKit-win-x64.zip" | Set-Content -LiteralPath ($package + '.sha256') -Encoding ascii
+          Write-Output "SHA256: $hash"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $existing = gh release view $tag --repo $env:GITHUB_REPOSITORY --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            if (-not ($existing | ConvertFrom-Json).isDraft) { throw 'A published release already exists; it will not be overwritten.' }
+          } else {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --verify-tag --title 'HM AppKit v0.5' --notes-file RELEASE_NOTES_v0.5.md --draft
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to create the release draft.' }
+          }
+          gh release upload $tag 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip' 'artifacts/HM-AppKit/v0.5/HM-AppKit-win-x64.zip.sha256' --repo $env:GITHUB_REPOSITORY --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to upload the release assets.' }
+          gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to publish the release.' }

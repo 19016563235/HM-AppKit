@@ -1,0 +1,62 @@
+{
+  "SchemaVersion": 1,
+  "Run": "20261015-host-jingmai",
+  "Source": "E:\\TempSoftware\\HM-AutoSetup-TestReports\\20261015-host-jingmai\\results.json",
+  "Mode": "--install-host",
+  "IsIsolatedGuest": false,
+  "Started": "2026-10-15T16:51:18.3857419+08:00",
+  "Finished": "2026-10-15T16:51:23.5711666+08:00",
+  "CatalogSha256": "B615908125134159B83D52300C906D6E666E0D4B1E7FCBFE39E74C9F1AF137E5",
+  "Applications": [
+    {
+      "Id": "jingmai",
+      "Name": "京麦工作台",
+      "RequestedDirectory": "E:\\TempSoftware\\Jingmai",
+      "State": "Unverified",
+      "Message": "安装器已正常退出，但没有可核对的 InstallLocation 或目录尚不存在；请人工检查实际安装位置。",
+      "Started": "2026-10-15T16:51:18.4388405+08:00",
+      "Finished": "2026-10-15T16:51:23.5319525+08:00",
+      "TargetExists": true,
+      "RegistryLocationsMatchTarget": false,
+      "EffectiveLocations": [],
+      "FileCountAtLeast": 147,
+      "ExecutableFilesSample": [
+        {
+          "Path": "E:\\TempSoftware\\Jingmai\\JMInstaller.exe",
+          "Bytes": 661136,
+          "FileVersion": "13.10.0.0"
+        }
+      ],
+      "Payload": {
+        "FileName": "JdWorkStationSetup13.10.0.exe",
+        "Bytes": 210564752,
+        "Sha256": "44BE514F33B5729821615ADFA09D134D20D04818EBC9F77650B24B367877A528",
+        "FileVersion": "13.10.0.0",
+        "ProductVersion": "13.10.0.0",
+        "VerifiedPublisher": "北京京东尚科信息技术有限公司",
+        "MetadataUrl": "https://jm.jd.com/homeVersionUpgradeNewServlet?platform=pc",
+        "DownloadUrl": "",
+        "RetainedPath": null,
+        "VerifiedAt": "2026-10-15T16:51:22.6558895+08:00"
+      },
+      "InstallerProcesses": [
+        {
+          "ExecutableName": "JdWorkStationSetup13.10.0.exe",
+          "Arguments": [
+            "/S",
+            "/D=E:\\TempSoftware\\Jingmai"
+          ],
+          "UnquotedFinalArgument": true,
+          "Started": "2026-10-15T16:51:22.6615426+08:00",
+          "Finished": "2026-10-15T16:51:23.5256537+08:00",
+          "ExitCode": 0,
+          "TimedOut": false,
+          "CancellationRequested": false
+        }
+      ],
+      "UninstallEntries": []
+    }
+  ],
+  "SystemInventoryCaptured": false,
+  "SystemInventoryErrors": null
+}
