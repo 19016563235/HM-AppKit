@@ -415,38 +415,6 @@ public partial class MainWindow : Window
 
     private List<AppRow> SelectedRows() => _rows.Where(r => r.Selected).ToList();
 
-    private void Preview_Click(object sender, RoutedEventArgs e)
-    {
-        KeyboardCommit();
-        _settings = ReadSettings();
-        RefreshDrives();
-        var selected = SelectedRows();
-        if (selected.Count == 0) { RunStatus.Text = "请先选择需要安装的应用。"; return; }
-        var blocked = 0;
-        AppendLog($"── 安装计划：{selected.Count} 个应用 ──");
-        AppendLog($"安装时检查官方更新并自动复用已校验缓存：{Path.Combine(AppContext.BaseDirectory, "Local Installer")}");
-        foreach (var row in selected)
-        {
-            try
-            {
-                var plan = DeploymentEngine.Plan(new InstallRequest(row.App, row.TargetPath), _settings, _drives);
-                row.SetStatus(InstallState.Pending, $"计划安装到 {plan.TargetDirectory}");
-                AppendLog($"[就绪] {row.App.Name} → {plan.TargetDirectory}（{(plan.IsSilent ? "静默安装" : "交互安装")}）");
-                AppendLog(plan.DisplayCommand);
-            }
-            catch (Exception ex)
-            {
-                blocked++;
-                row.SetStatus(InstallState.Skipped, ex.Message);
-                AppendLog($"[阻止] {row.App.Name}：{ex.Message}");
-            }
-        }
-        RunStatus.Text = $"安装计划已生成：{selected.Count - blocked} 个可执行，{blocked} 个被阻止。";
-        LogExpander.IsExpanded = true;
-        RunHint.Text = "预览不联网下载。安装时检查官方更新，校验并复用缓存；无可用缓存时下载。";
-        SaveState();
-    }
-
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
         if (_isRunning || _applyingSelfUpdate) return;
@@ -460,46 +428,56 @@ public partial class MainWindow : Window
         foreach (var row in selected) row.SetStatus(InstallState.Pending, "等待开始");
         _runCancellation = new CancellationTokenSource();
         SetRunning(true);
-        RunProgress.Value = 0;
+        UpdateRunProgress(selected.Count);
         RunStatus.Text = $"正在部署 {selected.Count} 个应用…";
         RunHint.Text = "已接受所选软件及 WinGet 源协议。Windows 管理员授权提示仍需在本机确认。";
         AppendLog($"── 开始部署：{selected.Count} 个应用；静默安装 {(_settings.Silent ? "开启" : "关闭")} ──");
         AppendLog($"自动缓存：{Path.Combine(AppContext.BaseDirectory, "Local Installer")}；安装时检查官方更新。");
+        Exception? runError = null;
+        var runCancelled = false;
         var progress = new Progress<InstallUpdate>(update =>
         {
-            var row = _rows.FirstOrDefault(r => r.App.Id == update.AppId);
-            row?.SetStatus(update.State, update.Message);
-            if (update.State is InstallState.Succeeded or InstallState.AlreadyInstalled or InstallState.Failed or InstallState.Skipped or InstallState.Cancelled or InstallState.Unverified)
+            var row = selected.FirstOrDefault(r => r.App.Id == update.AppId);
+            if (row is null) return;
+            row.SetStatus(update.State, update.Message);
+            if (IsTerminalState(update.State))
                 _terminalIds.Add(update.AppId);
-            RunProgress.Value = _terminalIds.Count * 100d / selected.Count;
-            RunStatus.Text = $"{row?.App.Name ?? update.AppId} · {update.Message}";
-            AppendLog($"[{row?.App.Name ?? update.AppId}] {update.Message}");
+            UpdateRunProgress(selected.Count);
+            RunStatus.Text = $"{row.App.Name} · {update.Message}";
+            AppendLog($"[{row.App.Name}] {update.Message}");
         });
         try
         {
             var requests = selected.Select(r => new InstallRequest(r.App, string.IsNullOrWhiteSpace(r.TargetPath) ? null : r.TargetPath.Trim())).ToList();
             await _engine.RunAsync(requests, _settings, progress, new Progress<string>(AppendLog), _runCancellation.Token);
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
-            var success = selected.Count(r => r.State is InstallState.Succeeded or InstallState.AlreadyInstalled);
-            var unresolved = selected.Count(r => r.State is InstallState.Failed or InstallState.Skipped or InstallState.Unverified);
-            var cancelled = selected.Count(r => r.State is InstallState.Cancelled or InstallState.Pending);
-            RunStatus.Text = $"本次部署结束：{success} 个已完成，{unresolved} 个需关注，{cancelled} 个未执行。";
-            RunHint.Text = "详细结果见应用状态与部署日志；安装位置验证未通过的应用会明确标记。";
-            AppendLog(RunStatus.Text);
         }
         catch (OperationCanceledException)
         {
-            RunStatus.Text = "已在当前安装结束后停止，剩余应用未执行。";
-            AppendLog(RunStatus.Text);
+            runCancelled = true;
         }
         catch (Exception ex)
         {
-            RunStatus.Text = $"部署未完成：{ex.Message}";
-            AppendLog(RunStatus.Text);
+            runError = ex;
         }
         finally
         {
-            foreach (var row in selected.Where(r => r.State is InstallState.Pending or InstallState.Checking)) row.SetStatus(InstallState.Cancelled, "本次未执行");
+            // Progress<T> posts UI callbacks. Apply every reported result before final counts.
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+            foreach (var row in selected)
+            {
+                if (!IsTerminalState(row.State))
+                    row.SetStatus(row.State == InstallState.Installing ? InstallState.Unverified : InstallState.Cancelled,
+                        row.State == InstallState.Installing ? "队列已结束，安装结果未核验，请检查应用与日志。" : "本次未执行");
+                _terminalIds.Add(row.App.Id);
+            }
+            UpdateRunProgress(selected.Count);
+            var success = selected.Count(r => r.State is InstallState.Succeeded or InstallState.AlreadyInstalled);
+            var unresolved = selected.Count(r => r.State is InstallState.Failed or InstallState.Skipped or InstallState.Unverified);
+            var cancelled = selected.Count(r => r.State == InstallState.Cancelled);
+            var outcome = runError is not null ? $"部署异常：{runError.Message}。" : runCancelled || _runCancellation.IsCancellationRequested ? "已停止后续安装。" : "本次部署结束。";
+            RunStatus.Text = $"{outcome} {success} 个已安装，{unresolved} 个需关注，{cancelled} 个未执行。";
+            RunHint.Text = "总体进度按已结束项累计，包含失败、阻止和未执行；具体安装结果见应用状态与日志。";
+            AppendLog(RunStatus.Text);
             _runCancellation.Dispose();
             _runCancellation = null;
             SetRunning(false);
@@ -508,11 +486,24 @@ public partial class MainWindow : Window
 
     private void KeyboardCommit() => System.Windows.Input.Keyboard.ClearFocus();
 
+    private static bool IsTerminalState(InstallState state) => state is
+        InstallState.Succeeded or InstallState.AlreadyInstalled or InstallState.Failed or
+        InstallState.Skipped or InstallState.Cancelled or InstallState.Unverified;
+
+    private void UpdateRunProgress(int total)
+    {
+        var ended = Math.Min(_terminalIds.Count, Math.Max(0, total));
+        var percentage = total > 0 ? ended * 100d / total : 0;
+        RunProgress.Value = percentage;
+        RunProgressSummary.Text = total > 0
+            ? $"总体进度 {Math.Floor(percentage):0}% · 已结束 {ended}/{total} 项"
+            : "总体进度 0%";
+    }
+
     private void SetRunning(bool running)
     {
         _isRunning = running;
-        InstallButton.IsEnabled = !running && _rows.Any(r => r.Selected);
-        PreviewButton.IsEnabled = !running;
+        InstallButton.IsEnabled = !running && !_applyingSelfUpdate && _rows.Any(r => r.Selected);
         StopButton.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
         StopButton.IsEnabled = running;
         DriveCards.IsEnabled = !running;

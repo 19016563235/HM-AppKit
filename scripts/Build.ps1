@@ -37,7 +37,8 @@ $publicEvidence = @(
     'v0.8-ui/verification.json',
     'v0.9-ui/verification.json',
     'v0.10-ui/verification.json',
-    'v0.11-ui/verification.json'
+    'v0.11-ui/verification.json',
+    'v0.12-ui/verification.json'
 )
 foreach ($evidence in $publicEvidence) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ('evidence/' + $evidence)) -PathType Leaf)) {
@@ -68,7 +69,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $OutputDirectory -Force
     $docsDestination = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDestination -Force | Out-Null
-    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md')) {
+    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md', 'hm-appkit-v0.12.md')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $document)) -Destination $docsDestination -Force
     }
     # Only sanitized, named summaries are public. Raw host snapshots, vendor

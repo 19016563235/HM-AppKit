@@ -1,0 +1,116 @@
+{
+  "Application": "HM AppKit",
+  "Version": "0.12.0",
+  "Date": "2026-10-16",
+  "InterfaceBehavior": {
+    "Passed": 14,
+    "Failed": 0,
+    "Mode": "Offscreen in-process WPF, simulated presentation and run guards only; screenshots do not represent real installations; no network, system input injection, installer execution or settings writes",
+    "Progress": [
+      {
+        "State": "installing",
+        "Value": 50,
+        "Text": "总体进度 50% · 已结束 1/2 项",
+        "TrackWidth": 943.3333333333334,
+        "FillWidth": 472,
+        "OnePhysicalPixelTolerance": 0.6666666666666666,
+        "FillColor": "#FF7483B6",
+        "SummaryActualWidth": 134,
+        "SummaryDesiredWidth": 134
+      },
+      {
+        "State": "idle",
+        "Percentage": 0,
+        "Summary": "总体进度 0%"
+      },
+      {
+        "State": "completed",
+        "Percentage": 100,
+        "Text": "总体进度 100% · 已结束 2/2 项",
+        "TrackWidth": 943.3333333333334,
+        "FillWidth": 943.3333333333334,
+        "Fill": "#FF7483B6"
+      }
+    ],
+    "Checks": [
+      {
+        "Name": "Preview UI and event handler are removed",
+        "Pass": true
+      },
+      {
+        "Name": "One-click install remains",
+        "Pass": true
+      },
+      {
+        "Name": "Selected apps enable the install action while idle",
+        "Pass": true
+      },
+      {
+        "Name": "Only actual terminal states contribute to finished count",
+        "Pass": true
+      },
+      {
+        "Name": "Overall progress has accessible 8px rounded track and fill",
+        "Pass": true
+      },
+      {
+        "Name": "Idle progress is zero without inventing a finished count",
+        "Pass": true
+      },
+      {
+        "Name": "One finished app of two displays actual 50 percent and half-width fill",
+        "Pass": true
+      },
+      {
+        "Name": "Repeated terminal ID does not inflate progress",
+        "Pass": true
+      },
+      {
+        "Name": "All terminal apps display 100 percent without implying all succeeded",
+        "Pass": true
+      },
+      {
+        "Name": "Running protects selection, paths and settings and exposes stop",
+        "Pass": true
+      },
+      {
+        "Name": "Returning to idle restores controls",
+        "Pass": true
+      },
+      {
+        "Name": "Self-update application keeps installation and update checking disabled",
+        "Pass": true
+      },
+      {
+        "Name": "Self-update controls recover after application guard clears",
+        "Pass": true
+      },
+      {
+        "Name": "Current and historical settings hashes unchanged",
+        "Pass": true
+      }
+    ]
+  },
+  "InstallationChecks": {
+    "EngineUnchanged": true,
+    "AutomaticPerApplicationChecksRetained": true,
+    "PreviewButtonRemoved": true,
+    "ProgressMeaning": "Fraction of queue entries that reached a final outcome, including failure/cancellation; not installation success rate"
+  },
+  "VisualChecks": [
+    "Idle 0 percent with no preview action",
+    "50 percent with one of two entries ended and visible half-width fill",
+    "100 percent including one failed entry; true card statuses retained"
+  ],
+  "UserConfigurationUnchanged": true,
+  "VendorInstallerExecuted": false,
+  "CoreRegressionTests": {
+    "Core": 118,
+    "Jingmai": 24,
+    "Cache": 35,
+    "UpdateDownload": 42,
+    "UpdateApply": 33,
+    "Passed": 252,
+    "Failed": 0
+  }
+}

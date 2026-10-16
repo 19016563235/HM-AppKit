@@ -119,7 +119,6 @@ public partial class MainWindow
         _applyingSelfUpdate = true;
         UpdateSelfUpdateControls();
         InstallButton.IsEnabled = false;
-        PreviewButton.IsEnabled = false;
         try
         {
             if (!string.Equals(Path.GetFileName(Environment.ProcessPath), SelfUpdateClient.ExecutableName, StringComparison.OrdinalIgnoreCase))
