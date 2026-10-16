@@ -2,7 +2,7 @@
 
 Windows 装机助手：选择岗位、软件和安装位置，一键依次安装。安装时自动复用本地缓存并检查官方更新，第三方安装包单独存放，不嵌入助手，也不随发布压缩包分发。
 
-v0.15 的助手更新优先检查和下载 Gitee 正式版，网络失败时回退 GitHub；两边都必须提供同标签的正式包与 SHA-256 校验文件。配置和业务安装包缓存继续保留。支持静默的应用优先安装，常规向导排到队尾，界面保留柔光圆点和低饱和配色。
+v0.16 提供 GitHub 到 Gitee 的代码与发行版附件自动同步工作流，配置仓库凭据后随发布执行。助手更新继续优先检查和下载 Gitee 正式版，网络失败时回退 GitHub；两边都必须提供同标签的正式包与 SHA-256 校验文件。配置和业务安装包缓存继续保留。
 
 ## 使用
 
@@ -88,10 +88,12 @@ v0.5 对京麦使用“常规安装·预填目录”：向导将预填所选目�
 .\scripts\Build.ps1
 ```
 
-版本统一维护在 `Directory.Build.props`。v0.15 发布位置为 `artifacts/HM-AppKit/v0.15/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.15/HM-AppKit-win-x64.zip`，同目录生成 `.zip.sha256`。后续版本的输出目录由版本号自动推导。构建与自动化验证不会安装业务软件，也不会复制 `Local Installer` 中的安装包进入产物。
+版本统一维护在 `Directory.Build.props`。v0.16 发布位置为 `artifacts/HM-AppKit/v0.16/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.16/HM-AppKit-win-x64.zip`，同目录生成 `.zip.sha256`。后续版本的输出目录由版本号自动推导。构建与自动化验证不会安装业务软件，也不会复制 `Local Installer` 中的安装包进入产物。
 
 构建使用仓库中的 `evidence/` 公开摘要，不依赖本地测试产生的 `artifacts/`、已安装业务软件或历史主机快照。
 
 京麦安装适配器使用 7-Zip 只读展开官方安装包。发布包保留 `licenses/7zip-license.txt` 和 `licenses/7zip-NOTICE.txt`，重新分发时应保留这些许可文件。
 
 推送 `v*` 标签可触发 GitHub Actions 发布；标签需与应用版本相符（例如 `v0.14` 和 `v0.14.0` 均对应 `0.14.0`），并提供与标签精确对应的 `RELEASE_NOTES_<tag>.md`。流程完成测试、构建和压缩包检查后发布 ZIP 与 SHA-256 文件，已公开的同名 Release 不会被覆盖。
+
+配置仓库 Secret `GITEE_TOKEN` 后，`main` 提交会自动同步代码，成功的 GitHub 发布会自动同步标签及原始 ZIP、SHA-256 附件到 Gitee。可在 `Sync HM AppKit to Gitee` 工作流手动补同步已有正式版。配置与故障处理见 [Gitee 分发说明](docs/gitee-migration.md)。

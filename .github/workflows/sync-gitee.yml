@@ -1,0 +1,75 @@
+name: Sync HM AppKit to Gitee
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ['Publish HM AppKit']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published stable GitHub tag to sync (or latest)'
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+# Serialize code and release syncs. A later run must not interrupt an upload.
+concurrency:
+  group: gitee-mirror
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  sync:
+    if: >-
+      github.repository == '19016563235/HM-AppKit' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'v')))
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      # Run only the trusted default-branch script, including on workflow_run.
+      - name: Check out trusted main and full tag history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test sync validation and recovery behavior
+        run: ./tests/gitee-sync/Test-Sync-Gitee.ps1
+      - name: Sync code and published release
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          HM_SYNC_EVENT: ${{ github.event_name }}
+          HM_SYNC_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch || 'latest' }}
+          HM_RELEASE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) {
+            throw 'Missing repository Actions Secret GITEE_TOKEN. Configure it, then rerun this workflow.'
+          }
+          if ($env:HM_SYNC_EVENT -eq 'push') {
+            ./scripts/Sync-Gitee.ps1 -CodeOnly
+          } else {
+            if ($env:HM_SYNC_EVENT -eq 'workflow_run') {
+              if ($env:HM_SYNC_TAG -notmatch '^v[0-9]+\.[0-9]+(?:\.[0-9]+){0,2}$') {
+                throw 'Unexpected source release tag.'
+              }
+              $commit = & git rev-parse --verify ('refs/tags/' + $env:HM_SYNC_TAG + '^{}')
+              if ($LASTEXITCODE -ne 0 -or $commit.Trim() -ne $env:HM_RELEASE_COMMIT) {
+                throw 'Release workflow commit does not match the tag.'
+              }
+            }
+            ./scripts/Sync-Gitee.ps1 -Tag $env:HM_SYNC_TAG
+          }
