@@ -46,6 +46,10 @@ try {
     $package.Files[$script:HmPackageName] = [pscustomobject]@{ Path = $packagePath; Hash = $hash; Asset = $asset }
     $package.Files[$script:HmPackageName + '.sha256'] = [pscustomobject]@{ Path = $checksumPath; Hash = Get-HmHash $checksumPath; Asset = $shaAsset }
 
+    Test-Case 'small metadata requests use a 60-second deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $false -HasDownload $false) -eq 60) }
+    Test-Case 'file uploads retain a 15-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $false) -eq 900) }
+    Test-Case 'file downloads retain a 15-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $false -HasDownload $true) -eq 900) }
+    Test-Case 'file transfer deadline is independent of upload/download precedence' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $true) -eq 900) }
     Test-Case 'stable version tags accepted' { Assert-True (Test-HmReleaseTag 'v0.15'); Assert-True (Test-HmReleaseTag 'v1.2.3.4') }
     Test-Case 'path, branch, and prerelease tags rejected' { foreach ($v in @('main', '../main', 'v0.15-beta', 'v1', 'v0.15/other')) { Assert-True (-not (Test-HmReleaseTag $v)) } }
     Test-Case 'HTTPS CDN redirects restricted by publisher' {
@@ -158,7 +162,7 @@ try {
     function Set-TestRelease { $script:Server.Release = [pscustomobject]@{ id = 73; tag_name = 'v0.15'; prerelease = $false } }
     Set-Item Function:Start-Sleep -Value { param([double]$Seconds) }
     Set-Item Function:Invoke-HmHttp -Value {
-        param([uri]$Uri, [string]$Method = 'GET', [hashtable]$Body, [string]$UploadPath, [switch]$Authenticated, [string]$OutFile, [long]$MaximumBytes, [switch]$AllowNotFound)
+        param([uri]$Uri, [string]$Method = 'GET', [hashtable]$Body, [string]$UploadPath, [switch]$Authenticated, [string]$OutFile, [string]$LogFileName, [long]$MaximumBytes, [switch]$AllowNotFound)
         if ($Uri.Host -eq 'api.github.com') { return $sourceRelease }
         if ($Uri.Host -eq 'github.com') {
             $from = if ($Uri.AbsolutePath.EndsWith('.sha256')) { $checksumPath } else { $packagePath }

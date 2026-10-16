@@ -31,6 +31,11 @@ function Test-HmDownloadRedirect([uri]$Initial, [uri]$Destination) {
     return $Destination.Host -eq $Initial.Host
 }
 
+function Get-HmHttpTimeoutSeconds([bool]$HasUpload, [bool]$HasDownload) {
+    if ($HasUpload -or $HasDownload) { return 900 }
+    return 60
+}
+
 # Only public GETs are retried here. POSTs have their own read-after-write recovery.
 # Token-bearing contents and exception details never leave this function.
 function Invoke-HmHttp {
@@ -41,6 +46,7 @@ function Invoke-HmHttp {
         [string]$UploadPath,
         [switch]$Authenticated,
         [string]$OutFile,
+        [ValidateSet('HM-AppKit-win-x64.zip', 'HM-AppKit-win-x64.zip.sha256')][string]$LogFileName,
         [long]$MaximumBytes = 134217728,
         [switch]$AllowNotFound
     )
@@ -52,16 +58,26 @@ function Invoke-HmHttp {
         throw 'Credentials may only be sent in a Gitee API POST body.'
     }
     if ($Authenticated -and [string]::IsNullOrWhiteSpace($env:GITEE_TOKEN)) { throw 'GITEE_TOKEN is required.' }
+    $timeoutSeconds = Get-HmHttpTimeoutSeconds -HasUpload ([bool]$UploadPath) -HasDownload ([bool]$OutFile)
+    $phase = if ($UploadPath) { 'upload' } elseif ($OutFile -and $Uri.Host -eq 'gitee.com') { 'verify' } elseif ($OutFile) { 'download' } elseif ($Method -eq 'POST') { 'release-create' } else { 'metadata' }
+    # Only fixed phase names and the two permitted public asset names may enter logs.
+    $fileLabel = '-'
+    if ($LogFileName) { $fileLabel = $LogFileName }
+    elseif ($UploadPath -and [IO.Path]::GetFileName($UploadPath) -in @($script:HmPackageName, ($script:HmPackageName + '.sha256'))) { $fileLabel = [IO.Path]::GetFileName($UploadPath) }
+    $expectedBytes = if ($UploadPath) { (Get-Item -LiteralPath $UploadPath).Length } elseif ($OutFile) { $MaximumBytes } else { 0L }
     $attempts = if ($Method -eq 'GET') { 3 } else { 1 }
     for ($attempt = 1; $attempt -le $attempts; $attempt++) {
         $handler = [System.Net.Http.HttpClientHandler]::new()
         $handler.AllowAutoRedirect = $false
         $handler.UseCookies = $false
         $client = [System.Net.Http.HttpClient]::new($handler)
-        $client.Timeout = [TimeSpan]::FromMinutes(15)
+        $client.Timeout = [TimeSpan]::FromSeconds($timeoutSeconds)
         $request = $null; $response = $null; $stream = $null; $file = $null
-        $deadline = [Threading.CancellationTokenSource]::new([TimeSpan]::FromMinutes(15))
+        $deadline = [Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds($timeoutSeconds))
         $status = 0
+        $readBytes = 0L; $outcome = 'failed'
+        $elapsed = [Diagnostics.Stopwatch]::StartNew()
+        Write-Host ('HM sync phase={0} event=start file={1} bytes={2} timeout_s={3} attempt={4}/{5}' -f $phase, $fileLabel, $expectedBytes, $timeoutSeconds, $attempt, $attempts)
         try {
             $current = $Uri
             for ($redirect = 0; $redirect -le 5; $redirect++) {
@@ -97,7 +113,7 @@ function Invoke-HmHttp {
                 }
                 break
             }
-            if ($status -eq 404 -and $AllowNotFound) { return $null }
+            if ($status -eq 404 -and $AllowNotFound) { $outcome = 'not-found'; return $null }
             if ($status -lt 200 -or $status -ge 300) { throw 'Request rejected.' }
             if ($OutFile) {
                 $size = $response.Content.Headers.ContentLength
@@ -107,23 +123,32 @@ function Invoke-HmHttp {
                 $buffer = [byte[]]::new(131072); $total = 0L
                 while (($read = $stream.ReadAsync($buffer, 0, $buffer.Length, $deadline.Token).GetAwaiter().GetResult()) -gt 0) {
                     $total += $read
+                    $readBytes = $total
                     if ($total -gt $MaximumBytes) { throw 'Download exceeds allowed size.' }
                     $file.Write($buffer, 0, $read)
                 }
                 if ($null -ne $size -and $total -ne $size) { throw 'Incomplete download.' }
+                $outcome = 'complete'
                 return
             }
             $text = $response.Content.ReadAsStringAsync($deadline.Token).GetAwaiter().GetResult()
             if ($text.Length -gt 8388608) { throw 'API response exceeds allowed size.' }
+            if (-not $UploadPath) { $readBytes = [Text.Encoding]::UTF8.GetByteCount($text) }
+            $outcome = 'complete'
             if ([string]::IsNullOrWhiteSpace($text) -or $text.Trim() -eq 'null') { return $null }
             return ConvertFrom-Json -InputObject $text -Depth 30
         } catch {
+            $outcome = if ($deadline.IsCancellationRequested) { 'timeout' } else { 'failed' }
             $retry = $Method -eq 'GET' -and ($status -eq 0 -or $status -in @(200, 408, 429) -or $status -ge 500)
             if (-not $retry -or $attempt -eq $attempts) {
                 # Deliberately omit request/response bodies, signed CDN URLs, and inner exceptions.
                 throw "Public API/download operation failed (HTTP $status)."
             }
         } finally {
+            # Upload read_bytes measures bytes consumed from the file, not server receipt.
+            if ($UploadPath -and $stream -and $stream.CanSeek) { $readBytes = $stream.Position }
+            $elapsed.Stop()
+            Write-Host ('HM sync phase={0} event={1} file={2} read_bytes={3} elapsed_ms={4} http={5} attempt={6}/{7}' -f $phase, $outcome, $fileLabel, $readBytes, $elapsed.ElapsedMilliseconds, $status, $attempt, $attempts)
             if ($file) { $file.Dispose() }
             if ($stream) { $stream.Dispose() }
             if ($response) { $response.Dispose() }
@@ -270,7 +295,7 @@ function Get-HmGitHubPackage([string]$RequestedTag, [string]$Stage) {
         $expected = 'https://github.com/19016563235/HM-AppKit/releases/download/' + $release.tag_name + '/' + $name
         if ($asset.browser_download_url -cne $expected) { throw 'Unexpected GitHub asset URL.' }
         $file = Join-Path $Stage $name
-        Invoke-HmHttp -Uri $expected -OutFile $file -MaximumBytes ([long]$asset.size)
+        Invoke-HmHttp -Uri $expected -OutFile $file -LogFileName $name -MaximumBytes ([long]$asset.size)
         if ((Get-Item -LiteralPath $file).Length -ne [long]$asset.size) { throw 'GitHub asset length mismatch.' }
         $files[$name] = [pscustomobject]@{ Path = $file; Hash = Get-HmHash $file; Asset = $asset }
     }
@@ -296,7 +321,7 @@ function Assert-HmGiteeAttachment([long]$ReleaseId, [object]$Attachment, [object
     if ([long]$Attachment.id -le 0 -or [long]$Attachment.size -ne (Get-Item -LiteralPath $File.Path).Length) { throw 'Existing Gitee attachment differs; no attachment was overwritten.' }
     $verify = Join-Path $Stage ('verify-' + [guid]::NewGuid().ToString('N'))
     try {
-        Invoke-HmHttp -Uri "$script:HmGiteeApi/releases/$ReleaseId/attach_files/$($Attachment.id)/download" -OutFile $verify -MaximumBytes ([long]$Attachment.size)
+        Invoke-HmHttp -Uri "$script:HmGiteeApi/releases/$ReleaseId/attach_files/$($Attachment.id)/download" -OutFile $verify -LogFileName ([IO.Path]::GetFileName($File.Path)) -MaximumBytes ([long]$Attachment.size)
         if ((Get-Item -LiteralPath $verify).Length -ne [long]$Attachment.size -or (Get-HmHash $verify) -cne $File.Hash) {
             throw 'Existing Gitee attachment differs; no attachment was overwritten.'
         }
@@ -324,7 +349,8 @@ function Sync-HmGiteeRelease([object]$Package, [string]$Stage, [switch]$ReadOnly
     $upload = [Collections.Generic.List[string]]::new(); $verified = [Collections.Generic.List[string]]::new()
     $attachments = @(Get-HmGiteeAttachments $release.id)
     # Check every existing attachment before uploading any missing attachment.
-    foreach ($name in @($script:HmPackageName, ($script:HmPackageName + '.sha256'))) {
+    # Transfer the small checksum first so upload permission is verified early.
+    foreach ($name in @(($script:HmPackageName + '.sha256'), $script:HmPackageName)) {
         $file = $Package.Files[$name]
         $found = @($attachments | Where-Object name -CEQ $name)
         if ($found.Count -gt 1) { throw 'Duplicate Gitee asset names; no attachments were changed.' }
