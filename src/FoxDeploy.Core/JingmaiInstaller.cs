@@ -212,19 +212,26 @@ public sealed class JingmaiPreparedInstaller : IAsyncDisposable
     public string TargetDirectory { get; }
     public ProcessRequest Request { get; }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (_disposed) return ValueTask.CompletedTask;
+        if (_disposed) return;
         _disposed = true;
-        try
+        // The native wizard can briefly leave filesystem handles open after exiting.
+        // Only retry this task's cleanup; never terminate the application to release them.
+        for (var attempt = 1; attempt <= 3; attempt++)
         {
-            if (Directory.Exists(_workspace)) DeleteOwnedDirectory(_workspace, _workspace + Path.DirectorySeparatorChar);
+            try
+            {
+                if (Directory.Exists(_workspace)) DeleteOwnedDirectory(_workspace, _workspace + Path.DirectorySeparatorChar);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt == 3)
+                    _log?.Report($"京麦临时准备文件仍被占用或无权清理，已保留以免影响运行中的程序：{_workspace}（{InstallerNetwork.SanitizeMessage(ex.Message)}）");
+                else await Task.Delay(TimeSpan.FromMilliseconds(attempt * 300)).ConfigureAwait(false);
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _log?.Report($"京麦临时准备文件未能全部清理：{_workspace}（{ex.Message}）");
-        }
-        return ValueTask.CompletedTask;
     }
 
     private static void DeleteOwnedDirectory(string directory, string prefix)

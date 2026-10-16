@@ -225,13 +225,13 @@ await TestAsync("Queued installation snapshots the selected drive", async () =>
         new InlineProgress<string>(_ => { }));
     Equal(@"C:\Software\Example", runner.Requests.Single().Arguments[^1]);
 });
-await TestAsync("Installer location mismatch fails even with exit zero", async () =>
+await TestAsync("Installer location mismatch is explicitly reported even with exit zero", async () =>
 {
     var mismatch = Path.Combine(temporary, "wrong");
     Directory.CreateDirectory(mismatch);
     var probe = new FakeProbe { Records = [new InstalledApplication(app.Name, mismatch, "test")] };
     var updates = await Run(new FakeRunner(), probe, [new InstallRequest(app, Path.Combine(temporary, "required"))]);
-    Equal(InstallState.Failed, updates[^1].State);
+    Equal(InstallState.LocationMismatch, updates[^1].State);
 });
 await TestAsync("Verified existing target records succeed", async () =>
 {
@@ -286,6 +286,8 @@ await Test("Known memory and privilege codes are distinguished", () =>
 await InstallerSourceTests.RunAsync(TestAsync);
 await PayloadValidationTests.RunAsync(TestAsync);
 await ManifestResolverTests.RunAsync(TestAsync);
+await DeploymentEngineBehaviorTests.RunAsync(TestAsync);
+await WeixinInstallerTests.RunAsync(TestAsync);
 
 // Delete only this test-created directory after verifying it remains under the system temp root.
 var temporaryRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;

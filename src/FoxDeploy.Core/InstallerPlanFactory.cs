@@ -89,8 +89,10 @@ public static class InstallerPlanFactory
         {
             ExecutablePath = executable,
             IsWinget = false,
+            Adapter = profile.Adapter,
             RequiresExistingTargetDirectory = profile.RequiresExistingTargetDirectory && profile.LocationSupported,
-            // NSIS consumes the entire command-line tail after /D=, without quotes.
+            // NSIS /D= and Weixin's reviewed /D-space plugin entry both consume
+            // the complete final path. Quoting that tail would change its value.
             UnquotedFinalArgument = type == "nsis" && profile.LocationSupported
         };
     }

@@ -45,7 +45,6 @@ public sealed class DeploymentEngine
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(progress);
         ArgumentNullException.ThrowIfNull(log);
-        var queue = requests.ToArray();
         var snapshot = new DeploymentSettings
         {
             DrivePriority = [.. settings.DrivePriority ?? []], SelectedDrive = settings.SelectedDrive, BaseFolder = settings.BaseFolder,
@@ -53,6 +52,9 @@ public sealed class DeploymentEngine
             SourceMode = InstallationSourceMode.Auto, LocalInstallerDirectory = InstallerSources.InstallerDirectory,
             KeepInstallers = true
         };
+        // OrderBy is stable: ordinary wizards run after silent installers while each
+        // group keeps the user's selection order. No payload or installer runs here.
+        var queue = requests.OrderByDescending(request => WillInstallSilently(request.App, snapshot)).ToArray();
         if (queue.Select(r => r.App.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != queue.Length)
             throw new ArgumentException("一个安装队列中不能包含重复应用。", nameof(requests));
         foreach (var request in queue) progress.Report(new InstallUpdate(request.App.Id, InstallState.Pending, "等待安装"));
@@ -89,9 +91,7 @@ public sealed class DeploymentEngine
                         var installed = _installationProbe.FindInstalled(request.App);
                         if (installed.Count > 0)
                         {
-                            var location = installed.Select(x => x.InstallLocation).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-                            progress.Report(new InstallUpdate(request.App.Id, InstallState.AlreadyInstalled,
-                                string.IsNullOrWhiteSpace(location) ? "检测到已安装，已跳过；未迁移现有安装目录" : $"已安装于 {location}；已跳过，未迁移目录", location));
+                            ReportExistingInstallation(request, snapshot, installed, progress);
                             continue;
                         }
                     }
@@ -108,7 +108,7 @@ public sealed class DeploymentEngine
                         if (check.CancellationRequested) { progress.Report(new InstallUpdate(request.App.Id, InstallState.Cancelled, "检查已停止，未启动安装")); continue; }
                         if (check.ExitCode == 0 && !check.TimedOut)
                         {
-                            progress.Report(new InstallUpdate(request.App.Id, InstallState.AlreadyInstalled, "WinGet 检测到已安装，已跳过；未迁移现有安装目录"));
+                            ReportExistingInstallation(request, snapshot, _installationProbe.FindInstalled(request.App), progress);
                             continue;
                         }
                         if (check.TimedOut || check.ExitCode != unchecked((int)0x8A150014))
@@ -136,12 +136,13 @@ public sealed class DeploymentEngine
                         : await _processRunner.RunAsync(new ProcessRequest(plan.IsWinget ? _wingetPath! : plan.ExecutablePath, plan.Arguments, _installTimeout, ProtectInstaller: true)
                     {
                         UnquotedFinalArgument = plan.UnquotedFinalArgument,
-                        WorkingDirectory = payload is null ? null : Path.GetDirectoryName(payload.FilePath)
+                        WorkingDirectory = payload is null ? null : Path.GetDirectoryName(payload.FilePath),
+                        OutputCodePage = !plan.IsWinget && request.App.Id.Equals("qianniu", StringComparison.OrdinalIgnoreCase) ? 936 : null
                     }, log, cancellationToken).ConfigureAwait(false);
                     haltedByTimeout = result.TimedOut;
                     if (IsAlreadyInstalled(result.ExitCode))
                     {
-                        progress.Report(new InstallUpdate(request.App.Id, InstallState.AlreadyInstalled, "安装器报告应用已经安装，未迁移目录"));
+                        ReportExistingInstallation(request.App, plan.TargetDirectory, _installationProbe.FindInstalled(request.App), progress);
                         continue;
                     }
                     if (IsRebootRequired(result.ExitCode))
@@ -181,6 +182,56 @@ public sealed class DeploymentEngine
         finally { if (acquired) QueueGate.Release(); }
     }
 
+    private static bool WillInstallSilently(AppDefinition app, DeploymentSettings settings)
+    {
+        if (!settings.Silent) return false;
+        if (InstallerSources.UsesWinget(app, settings)) return app.SilentSupported;
+        var profile = InstallerSources.GetProfile(app, settings);
+        return profile is { SilentSupported: true } && profile.Adapter != "jingmai";
+    }
+
+    private void ReportExistingInstallation(InstallRequest request, DeploymentSettings settings,
+        IReadOnlyList<InstalledApplication> records, IProgress<InstallUpdate> progress)
+    {
+        string? target;
+        try
+        {
+            // Checking an existing installation does not require support for a new
+            // silent install, but it must use exactly the same effective destination.
+            target = InstallerSources.UsesWinget(request.App, settings) && !request.App.LocationSupported && !settings.RequireCustomLocation
+                ? null : DriveResolver.ResolveTarget(request.App, request.TargetDirectory, settings, _driveProvider());
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            progress.Report(new InstallUpdate(request.App.Id, InstallState.ExistingUnverified,
+                "检测到已安装，已跳过；本次目标目录无法核对：" + InstallerNetwork.SafeSummary(ex) + "；未重新安装或迁移文件。", request.TargetDirectory));
+            return;
+        }
+        ReportExistingInstallation(request.App, target, records, progress);
+    }
+
+    private static void ReportExistingInstallation(AppDefinition app, string? target,
+        IReadOnlyList<InstalledApplication> records, IProgress<InstallUpdate> progress)
+    {
+        var locations = records.Select(record => record.InstallLocation).Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (target is not null && locations.Any(location => !InstallationLocationVerifier.IsWithinTarget(location, target)))
+        {
+            progress.Report(new InstallUpdate(app.Id, InstallState.LocationMismatch,
+                $"已安装，但目录不符合要求。系统记录：{string.Join("；", locations)}；要求：{target}。已跳过，未重新安装或迁移文件。", target));
+            return;
+        }
+        if (locations.Length == 0 || records.Any(record => string.IsNullOrWhiteSpace(record.InstallLocation)) || locations.Any(location => !Directory.Exists(location)))
+        {
+            progress.Report(new InstallUpdate(app.Id, InstallState.ExistingUnverified,
+                "检测到已安装，已跳过；现有安装目录记录不完整或目录不存在，无法核对。未重新安装或迁移文件。", target));
+            return;
+        }
+        progress.Report(new InstallUpdate(app.Id, InstallState.AlreadyInstalled,
+            target is null ? $"已安装于 {string.Join("；", locations)}；本次允许厂商默认目录，已跳过。"
+                : $"已安装，已核对目录符合 {target}；已跳过，未重新安装或迁移文件。", target ?? locations[0]));
+    }
+
     private void VerifyInstallation(AppDefinition app, InstallPlan plan, IProgress<InstallUpdate> progress, bool exceededTimeout)
     {
         var records = _installationProbe.FindInstalled(app);
@@ -188,7 +239,7 @@ public sealed class DeploymentEngine
         var prefix = exceededTimeout ? "安装曾超过等待阈值，现已退出；" : "";
         if (plan.TargetDirectory is not null && locations.Any(p => !InstallationLocationVerifier.IsWithinTarget(p, plan.TargetDirectory)))
         {
-            progress.Report(new InstallUpdate(app.Id, InstallState.Failed, prefix + $"安装目录不符合要求。系统记录：{string.Join("；", locations)}；要求：{plan.TargetDirectory}。未自动迁移文件。", plan.TargetDirectory));
+            progress.Report(new InstallUpdate(app.Id, InstallState.LocationMismatch, prefix + $"安装目录不符合要求。系统记录：{string.Join("；", locations)}；要求：{plan.TargetDirectory}。未自动迁移文件。", plan.TargetDirectory));
             return;
         }
         if (locations.Length > 0 && locations.All(Directory.Exists))

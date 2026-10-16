@@ -254,6 +254,94 @@ await Test("Product version mismatch rejects validly downloaded package", async 
     using var fixture = new Fixture(); fixture.VersionMismatch = true;
     await Throws<InvalidDataException>(async () => await fixture.Client.DownloadAndStageAsync(await fixture.Release())); fixture.AssertNoStages();
 });
+await Test("Update metadata retries transient HTTP failure within three attempts", async () =>
+{
+    using var fixture = new Fixture();
+    fixture.Override = (request, _) =>
+    {
+        fixture.Override = null;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { RequestMessage = request });
+    };
+    Check(await fixture.Release() is not null && fixture.Requests.Count == 2, "Metadata did not recover with one retry.");
+});
+await Test("Update metadata retries an incomplete response body", async () =>
+{
+    using var fixture = new Fixture();
+    fixture.Override = (request, _) =>
+    {
+        fixture.Override = null;
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new ByteArrayContent([123]) };
+        response.Content.Headers.ContentLength = 100;
+        return Task.FromResult(response);
+    };
+    Check(await fixture.Release() is not null && fixture.Requests.Count == 2, "Metadata EOF did not retry.");
+});
+await Test("Update metadata exceeding its declared length is rejected without retry", async () =>
+{
+    using var fixture = new Fixture();
+    fixture.Override = (request, _) =>
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new StringContent(fixture.Metadata.ToJsonString()) };
+        response.Content.Headers.ContentLength = 1;
+        return Task.FromResult(response);
+    };
+    await Throws<InvalidDataException>(() => fixture.Client.CheckForUpdateAsync("0.5"));
+    Check(fixture.Requests.Count == 1, "Invalid oversized metadata was retried.");
+    fixture.AssertNoStages(); fixture.AssertPreserved();
+});
+foreach (var failureMode in new[] { "reset", "eof" })
+    await Test("Interrupted update package restarts in a clean stage: " + failureMode, async () =>
+    {
+        using var fixture = new Fixture(); var release = await fixture.Release();
+        var downloads = 0;
+        fixture.Override = (request, _) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith(".sha256", StringComparison.Ordinal))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new StringContent(fixture.Checksum) });
+            downloads++;
+            HttpContent content = downloads == 1
+                ? failureMode == "reset" ? new StreamContent(new BrokenReadStream(fixture.Package)) : new ByteArrayContent(fixture.Package[..^1])
+                : new ByteArrayContent(fixture.Package);
+            content.Headers.ContentLength = fixture.Package.Length;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = content });
+        };
+        var messages = new List<SelfUpdateProgress>();
+        var staged = await fixture.Client.DownloadAndStageAsync(release, new InlineProgress<SelfUpdateProgress>(messages.Add));
+        Check(downloads == 2 && fixture.Verifications == 1 && staged.Sha256 == Hash(fixture.Package), "Recovery did not verify exactly one complete package.");
+        Check(Directory.GetDirectories(fixture.StagingRoot).Length == 1 && messages.Any(item => item.Message.Contains("重试", StringComparison.Ordinal)), "Failed stage survived or retry not reported.");
+        fixture.AssertPreserved();
+    });
+await Test("Update package retries stop at three and preserve configuration/cache", async () =>
+{
+    using var fixture = new Fixture(); var release = await fixture.Release(); var downloads = 0;
+    fixture.Override = (request, _) =>
+    {
+        if (request.RequestUri!.AbsolutePath.EndsWith(".sha256", StringComparison.Ordinal))
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request, Content = new StringContent(fixture.Checksum) });
+        downloads++;
+        throw new HttpRequestException("connection reset");
+    };
+    await Throws<HttpRequestException>(() => fixture.Client.DownloadAndStageAsync(release));
+    Check(downloads == 3 && fixture.Verifications == 0, "Update retry was not bounded.");
+    fixture.AssertNoStages(); fixture.AssertPreserved();
+});
+await Test("Update checksum mismatch is not retried", async () =>
+{
+    using var fixture = new Fixture(); var release = await fixture.Release(); fixture.Package[^1] ^= 1;
+    await Throws<InvalidDataException>(() => fixture.Client.DownloadAndStageAsync(release));
+    Check(fixture.Requests.Count(request => request.Uri.EndsWith(".zip", StringComparison.Ordinal)) == 1, "Invalid package was fetched again.");
+    fixture.AssertNoStages(); fixture.AssertPreserved();
+});
+await Test("Cancellation during updater backoff stops before another request", async () =>
+{
+    using var stop = new CancellationTokenSource();
+    using var fixture = new Fixture(retryDelay: (_, token) => { stop.Cancel(); token.ThrowIfCancellationRequested(); return Task.CompletedTask; });
+    fixture.Override = (_, _) => throw new HttpRequestException("offline");
+    await Throws<OperationCanceledException>(() => fixture.Client.CheckForUpdateAsync("0.5", stop.Token));
+    Check(fixture.Requests.Count == 1, "Canceled backoff continued to send requests.");
+    fixture.AssertNoStages(); fixture.AssertPreserved();
+});
+
 Console.WriteLine($"{passed} passed; {failures.Count} failed.");
 foreach (var failure in failures) Console.Error.WriteLine(failure);
 return failures.Count == 0 ? 0 : 1;
@@ -291,7 +379,8 @@ sealed class Fixture : IDisposable
     public bool VersionMismatch { get; set; }
     public Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? Override { get; set; }
 
-    public Fixture(byte[]? archive = null, Func<string, SelfUpdateOptions>? options = null, bool productionVerifier = false)
+    public Fixture(byte[]? archive = null, Func<string, SelfUpdateOptions>? options = null, bool productionVerifier = false,
+        Func<TimeSpan, CancellationToken, Task>? retryDelay = null)
     {
         Package = archive ?? ValidArchive();
         var hash = Convert.ToHexString(SHA256.HashData(Package)).ToLowerInvariant();
@@ -311,7 +400,7 @@ sealed class Fixture : IDisposable
             {
                 Verifications++;
                 if (!File.Exists(path) || version != "0.6.0" || VersionMismatch) throw new InvalidDataException("productversion mismatch");
-            });
+            }, retryDelay ?? ((_, token) => { token.ThrowIfCancellationRequested(); return Task.CompletedTask; }));
     }
 
     private async Task<HttpResponseMessage> Respond(HttpRequestMessage request, CancellationToken token)
@@ -372,3 +461,14 @@ sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpRespon
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => respond(request, cancellationToken);
 }
 sealed record RequestRecord(string Uri, string? ETag, string UserAgent);
+
+sealed class BrokenReadStream(byte[] bytes) : MemoryStream(bytes, writable: false)
+{
+    private bool _read;
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (_read) throw new IOException("connection reset", new System.Net.Sockets.SocketException(10054));
+        _read = true;
+        return base.ReadAsync(buffer[..Math.Min(buffer.Length, 16)], cancellationToken);
+    }
+}

@@ -83,15 +83,20 @@ public static partial class AppCatalog
 
     private static void ValidateProfile(string appName, InstallerProfile profile)
     {
-        if (profile.Adapter is not ("" or "jingmai") ||
+        if (profile.Adapter is not ("" or "jingmai" or "weixin") ||
             (profile.InteractiveFallback && profile.Adapter != "jingmai") ||
-            (profile.Adapter == "jingmai" && (!profile.InteractiveFallback || profile.SilentSupported || !profile.LocationSupported)))
+            (profile.Adapter == "jingmai" && (!profile.InteractiveFallback || profile.SilentSupported || !profile.LocationSupported)) ||
+            (profile.Adapter == "weixin" && (!profile.SilentSupported || !profile.LocationSupported ||
+                !string.Equals(profile.InstallerType, "nsis", StringComparison.OrdinalIgnoreCase) ||
+                profile.InstallLocationArgument != "/D {InstallDirectory}")))
             throw new InvalidDataException($"{appName} 的安装适配器配置无效。");
         if (profile.InstallerType is null || !new[] { "nsis", "exe", "msi" }.Contains(profile.InstallerType, StringComparer.OrdinalIgnoreCase))
             throw new InvalidDataException($"{appName} 的安装器类型必须为 nsis、exe 或 msi。");
         if (profile.SilentArguments is null || profile.InteractiveArguments is null ||
             profile.SilentArguments.Concat(profile.InteractiveArguments).Any(argument => argument is null || argument.Any(char.IsControl)))
             throw new InvalidDataException($"{appName} 的安装参数包含无效值。");
+        if (profile.Adapter == "weixin" && (!profile.SilentArguments.SequenceEqual(["/S"]) || profile.InteractiveArguments.Count != 0))
+            throw new InvalidDataException($"{appName} 的微信适配只允许已核验的 /S 静默参数和独立的末尾目录参数。");
         if (profile.AllowedPublishers is null || profile.AllowedPublishers.Any(publisher => string.IsNullOrWhiteSpace(publisher) || publisher.Any(char.IsControl)))
             throw new InvalidDataException($"{appName} 的签名发布者名称无效。");
         if (profile.SilentSupported && profile.InstallerType.Equals("exe", StringComparison.OrdinalIgnoreCase) && profile.SilentArguments.Count == 0)
@@ -99,12 +104,13 @@ public static partial class AppCatalog
         if (profile.LocationSupported && (string.IsNullOrWhiteSpace(profile.InstallLocationArgument) ||
             !profile.InstallLocationArgument.Contains("{InstallDirectory}", StringComparison.Ordinal) || profile.InstallLocationArgument.Any(char.IsControl)))
             throw new InvalidDataException($"{appName} 的安装目录参数需要 InstallDirectory 占位符。");
-        if (profile.InstallerType.Equals("nsis", StringComparison.OrdinalIgnoreCase) && profile.LocationSupported && profile.InstallLocationArgument != "/D={InstallDirectory}")
-            throw new InvalidDataException($"{appName} 的 NSIS 安装目录参数必须为 /D={{InstallDirectory}}。");
+        var expectedNsisLocation = profile.Adapter == "weixin" ? "/D {InstallDirectory}" : "/D={InstallDirectory}";
+        if (profile.InstallerType.Equals("nsis", StringComparison.OrdinalIgnoreCase) && profile.LocationSupported && profile.InstallLocationArgument != expectedNsisLocation)
+            throw new InvalidDataException($"{appName} 的 NSIS 安装目录参数必须为 {expectedNsisLocation}。");
         if (!profile.LocationSupported && profile.SilentArguments.Concat(profile.InteractiveArguments).Any(argument => argument.Contains("{InstallDirectory}", StringComparison.Ordinal)))
             throw new InvalidDataException($"{appName} 未支持自定义目录，不能在安装参数中传入目录。");
         if (profile.InstallerType.Equals("nsis", StringComparison.OrdinalIgnoreCase) &&
-            profile.SilentArguments.Concat(profile.InteractiveArguments).Any(argument => argument.StartsWith("/D=", StringComparison.OrdinalIgnoreCase)))
+            profile.SilentArguments.Concat(profile.InteractiveArguments).Any(argument => argument.StartsWith("/D=", StringComparison.OrdinalIgnoreCase) || argument.StartsWith("/D ", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException($"{appName} 的 NSIS 目录参数由安装计划自动放在最后。");
     }
 

@@ -9,6 +9,7 @@ public sealed record ProcessRequest(string FileName, IReadOnlyList<string> Argum
     public bool UnquotedFinalArgument { get; init; }
     public string? WorkingDirectory { get; init; }
     public bool ShowWindow { get; init; }
+    public int? OutputCodePage { get; init; }
 }
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError, bool TimedOut = false, bool CancellationRequested = false);
 
@@ -32,17 +33,19 @@ public sealed partial class SystemProcessRunner : IProcessRunner
         };
         if (!request.ShowWindow)
         {
-            info.StandardOutputEncoding = Encoding.UTF8;
-            info.StandardErrorEncoding = Encoding.UTF8;
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var encoding = request.OutputCodePage is { } codePage ? Encoding.GetEncoding(codePage) : Encoding.UTF8;
+            info.StandardOutputEncoding = encoding;
+            info.StandardErrorEncoding = encoding;
         }
         if (!string.IsNullOrWhiteSpace(request.WorkingDirectory)) info.WorkingDirectory = request.WorkingDirectory;
         if (request.UnquotedFinalArgument)
         {
             var final = request.Arguments.LastOrDefault();
-            if (final is null || !final.StartsWith("/D=", StringComparison.Ordinal) || final.Length <= 3 || final.Contains('"') || final.Any(char.IsControl))
-                throw new ArgumentException("NSIS 安装目录必须是最后一个 /D= 参数，且不能包含引号或控制字符。", nameof(request));
+            if (final is null || !(final.StartsWith("/D=", StringComparison.Ordinal) || final.StartsWith("/D ", StringComparison.Ordinal)) || final.Length <= 3 || final.Contains('"') || final.Any(char.IsControl))
+                throw new ArgumentException("安装目录必须是最后一个 /D= 或厂商 /D 空格参数，且不能包含引号或控制字符。", nameof(request));
             // No shell participates. Quote all normal arguments using Windows rules;
-            // NSIS specifically requires the final /D= tail to remain unquoted.
+            // NSIS /D= and Weixin's custom /D tail must remain unquoted, last and intact.
             info.Arguments = string.Join(" ", request.Arguments.SkipLast(1).Select(QuoteWindowsArgument).Append(final));
         }
         else foreach (var argument in request.Arguments) info.ArgumentList.Add(argument);

@@ -49,11 +49,11 @@
       "WeChat",
       "微信"
     ],
-    "Notes": "缓存微信 4.x 厂商原包，使用 NSIS /S 和 /D 参数；聊天记录目录需在微信内另设。",
+    "Notes": "微信 4.1.15.53 原包的厂商目录入口为末尾 /D 空格路径，不能使用会被 NSIS 提前移除的 /D=；已完成静态核验和命令构造测试，仍需干净系统安装复测。聊天记录目录需在微信内另设。",
     "OnlineInstaller": {
       "WingetManifestPath": "t/Tencent/WeChat/Universal",
       "SilentSupported": true,
-      "InstallLocationArgument": "/D={InstallDirectory}",
+      "InstallLocationArgument": "/D {InstallDirectory}",
       "SilentArguments": [
         "/S"
       ],
@@ -63,6 +63,7 @@
       ],
       "InteractiveArguments": [],
       "InstallerType": "nsis",
+      "Adapter": "weixin",
       "LocationSupported": true,
       "AllowedPublishers": [
         "Tencent Technology (Shenzhen) Company Limited"

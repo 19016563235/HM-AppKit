@@ -79,6 +79,32 @@ try
         Expect(result.ExitCode == 0 && !Directory.EnumerateFileSystemEntries(workRoot).Any(), "clean task workspace only after the actual vendor process ends");
         Expect(File.Exists(sentinel), "cleanup must preserve all target files and never claim or remove an installation");
     });
+    await CheckAsync("cleanup retries a transient file lock without changing native result", async () =>
+    {
+        var workRoot = Path.Combine(testRoot, "transient-lock-work");
+        var runner = new FakeRunner(validListing, holdNative: true);
+        var installation = new JingmaiInstaller(runner, workRoot).RunAsync(payload, target, TimeSpan.FromMinutes(30), null, CancellationToken.None);
+        var native = await runner.NativeStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var held = File.Open(Path.Combine(native.WorkingDirectory!, "install.7z"), FileMode.Open, FileAccess.Read, FileShare.None);
+        runner.NativeCompleted.SetResult(new ProcessResult(0, "", ""));
+        try { await Task.Delay(150); }
+        finally { held.Dispose(); }
+        var result = await installation;
+        Expect(result.ExitCode == 0 && !Directory.EnumerateFileSystemEntries(workRoot).Any(), "Transient lock left stage files or changed install result.");
+    });
+    await CheckAsync("persistent cleanup lock preserves files and reports one honest warning", async () =>
+    {
+        var workRoot = Path.Combine(testRoot, "persistent-lock-work");
+        var runner = new FakeRunner(validListing, holdNative: true);
+        var messages = new List<string>();
+        var installation = new JingmaiInstaller(runner, workRoot).RunAsync(payload, target, TimeSpan.FromMinutes(30), new ImmediateProgress(messages.Add), CancellationToken.None);
+        var native = await runner.NativeStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        using var held = File.Open(Path.Combine(native.WorkingDirectory!, "install.7z"), FileMode.Open, FileAccess.Read, FileShare.None);
+        runner.NativeCompleted.SetResult(new ProcessResult(0, "", ""));
+        var result = await installation;
+        Expect(result.ExitCode == 0 && File.Exists(held.Name) && messages.Count(message => message.Contains("已保留以免影响", StringComparison.Ordinal)) == 1,
+            "Persistent lock must leave a warning and preserve the native result and locked file.");
+    });
     await CheckAsync("failed extraction never launches vendor code and removes tools", async () =>
     {
         var workRoot = Path.Combine(testRoot, "failed-work");

@@ -1,0 +1,31 @@
+{
+  "Version": "0.14.0",
+  "Date": "2026-10-16",
+  "Scope": "Queue order, honest installed-location results, compact UI, process output and self-update retry",
+  "VendorInstallersExecuted": false,
+  "ExistingApplicationsReinstalledOrRemoved": false,
+  "JingmaiDirectoryPrefillChanged": false,
+  "SelfUpdateSource": "GitHub; Gitee migration not configured",
+  "TargetedRegression": {
+    "Core": 138,
+    "Network": 37,
+    "UpdateDownload": 50,
+    "Jingmai": 26,
+    "Runtime": 3,
+    "Failed": 0
+  },
+  "FullRegression": { "Passed": 322, "Failed": 0, "WindowsX64PublishSucceeded": true },
+  "UiSmoke": {
+    "Passed": 19,
+    "Failed": 0,
+    "DefaultMinimumWindowShowsAllElevenApps": true,
+    "LogAndUpdateBannerLayoutChecked": true,
+    "DirectoryWarningsAreTerminalAndNotGreen": true,
+    "UserSettingsHashesUnchanged": true,
+    "VendorInstallationSimulatedOnly": true
+  },
+  "Weixin": {
+    "VerificationScope": "Read-only static analysis of publisher-verified payload plus command-line construction",
+    "ActualNewMachineInstallationVerified": false
+  }
+}

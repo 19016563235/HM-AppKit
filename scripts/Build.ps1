@@ -39,7 +39,8 @@ $publicEvidence = @(
     'v0.10-ui/verification.json',
     'v0.11-ui/verification.json',
     'v0.12-ui/verification.json',
-    'v0.13-network/verification.json'
+    'v0.13-network/verification.json',
+    'v0.14-installation/verification.json'
 )
 foreach ($evidence in $publicEvidence) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ('evidence/' + $evidence)) -PathType Leaf)) {
@@ -54,6 +55,9 @@ try {
 
     & dotnet run --project tests/FoxDeploy.Jingmai.Tests/FoxDeploy.Jingmai.Tests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw '京麦安装适配器验证未通过。' }
+
+    & dotnet run --project tests/FoxDeploy.Runtime.Tests/FoxDeploy.Runtime.Tests.csproj -c Release
+    if ($LASTEXITCODE -ne 0) { throw '安装进程输出编码验证未通过。' }
 
     & dotnet run --project tests/FoxDeploy.Cache.Tests/FoxDeploy.Cache.Tests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw '安装包缓存与更新验证未通过。' }
@@ -73,7 +77,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $OutputDirectory -Force
     $docsDestination = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDestination -Force | Out-Null
-    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md', 'hm-appkit-v0.12.md', 'hm-appkit-v0.13.md')) {
+    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md', 'hm-appkit-v0.12.md', 'hm-appkit-v0.13.md', 'hm-appkit-v0.14.md', 'weixin-directory-2026-10-16.md', 'gitee-migration.md')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $document)) -Destination $docsDestination -Force
     }
     # Only sanitized, named summaries are public. Raw host snapshots, vendor

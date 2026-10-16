@@ -70,6 +70,7 @@ public partial class MainWindow : Window
             {
                 AdminButton.Content = "✓ 管理员";
                 AdminButton.IsEnabled = false;
+                AdminButton.Visibility = Visibility.Collapsed;
             }
         }
         Loaded += async (_, _) =>
@@ -225,9 +226,8 @@ public partial class MainWindow : Window
     private void UpdateInstallServiceStatus()
     {
         var requiresWinget = _rows.Any(row => InstallerSources.UsesWinget(row.App, _settings));
-        WingetStatus.Text = !requiresWinget || _sourceCheckCompleted && _wingetReady
-            ? "安装时自动检查官方更新"
-            : !_sourceCheckCompleted ? "正在检查安装服务…" : "部分 WinGet 应用暂不可用";
+        WingetStatus.Visibility = requiresWinget && _sourceCheckCompleted && !_wingetReady ? Visibility.Visible : Visibility.Collapsed;
+        WingetStatus.Text = "部分应用需要 WinGet";
     }
 
     private void SaveState()
@@ -471,11 +471,12 @@ public partial class MainWindow : Window
                 _terminalIds.Add(row.App.Id);
             }
             UpdateRunProgress(selected.Count);
-            var success = selected.Count(r => r.State is InstallState.Succeeded or InstallState.AlreadyInstalled);
-            var unresolved = selected.Count(r => r.State is InstallState.Failed or InstallState.Skipped or InstallState.Unverified);
+            var newlyInstalled = selected.Count(r => r.State == InstallState.Succeeded);
+            var alreadyInstalled = selected.Count(r => r.State == InstallState.AlreadyInstalled);
+            var unresolved = selected.Count(r => r.State is InstallState.Failed or InstallState.Skipped or InstallState.Unverified or InstallState.LocationMismatch or InstallState.ExistingUnverified);
             var cancelled = selected.Count(r => r.State == InstallState.Cancelled);
             var outcome = runError is not null ? $"部署异常：{runError.Message}。" : runCancelled || _runCancellation.IsCancellationRequested ? "已停止后续安装。" : "本次部署结束。";
-            RunStatus.Text = $"{outcome} {success} 个已安装，{unresolved} 个需关注，{cancelled} 个未执行。";
+            RunStatus.Text = $"{outcome} 本轮新安装 {newlyInstalled}，已安装跳过 {alreadyInstalled}，需关注 {unresolved}，未执行 {cancelled}。";
             RunHint.Text = "总体进度按已结束项累计，包含失败、阻止和未执行；具体安装结果见应用状态与日志。";
             AppendLog(RunStatus.Text);
             _runCancellation.Dispose();
@@ -488,7 +489,8 @@ public partial class MainWindow : Window
 
     private static bool IsTerminalState(InstallState state) => state is
         InstallState.Succeeded or InstallState.AlreadyInstalled or InstallState.Failed or
-        InstallState.Skipped or InstallState.Cancelled or InstallState.Unverified;
+        InstallState.Skipped or InstallState.Cancelled or InstallState.Unverified or
+        InstallState.LocationMismatch or InstallState.ExistingUnverified;
 
     private void UpdateRunProgress(int total)
     {
@@ -709,14 +711,15 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
         {
             InstallState.Pending => "待安装", InstallState.Checking => "安装中", InstallState.Installing => "安装中",
             InstallState.Succeeded => "已安装", InstallState.AlreadyInstalled => "已安装", InstallState.Failed => "失败",
-            InstallState.Skipped => "已阻止", InstallState.Cancelled => "未执行", InstallState.Unverified => "待核验", _ => "等待"
+            InstallState.Skipped => "已阻止", InstallState.Cancelled => "未执行", InstallState.Unverified => "待核验",
+            InstallState.LocationMismatch => "目录不符", InstallState.ExistingUnverified => "位置待核验", _ => "等待"
         };
         (StatusDotColor, StatusBackground) = state switch
         {
             InstallState.Succeeded or InstallState.AlreadyInstalled => ("#6B8F7B", "#EFF4F1"),
             InstallState.Installing or InstallState.Checking => ("#B59B64", "#F6F3EC"),
             InstallState.Failed => ("#B47D7D", "#F8F0F0"),
-            InstallState.Skipped or InstallState.Unverified => ("#AD956E", "#F6F3ED"),
+            InstallState.Skipped or InstallState.Unverified or InstallState.LocationMismatch or InstallState.ExistingUnverified => ("#AD956E", "#F6F3ED"),
             _ => ("#A7B0BE", "#FFFFFF")
         };
     }

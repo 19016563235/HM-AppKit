@@ -62,7 +62,7 @@ public partial class MainWindow
         catch (OperationCanceledException) when (_startupUpdateCancellation.IsCancellationRequested) { }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or System.Text.Json.JsonException or OperationCanceledException or ArgumentException)
         {
-            AppendLog($"HM AppKit 更新检查未完成：{ex.Message}；仍可正常使用，稍后可点击“检查更新”重试。");
+            AppendLog($"HM AppKit 更新检查未完成：{InstallerNetwork.DescribeFailure(ex)}；仍可正常使用，稍后可点击“检查更新”重试。");
             SelfUpdateCheckButton.ToolTip = "更新检查暂不可用，点击可重试；不影响应用安装。";
         }
         finally
@@ -100,9 +100,9 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            AppendLog($"HM AppKit 更新包准备失败：{ex.Message}；当前版本继续运行。");
+            AppendLog($"HM AppKit 更新包准备失败：{InstallerNetwork.DescribeFailure(ex)}；当前版本继续运行。");
             SelfUpdateHint.Text = "更新下载未完成，可点击重试；当前版本继续运行。";
-            MessageBox.Show(this, $"更新包未能完成校验或下载，请稍后重试。\n\n{ex.Message}", "HM AppKit 更新", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, $"更新包未能完成校验或下载，请稍后重试。\n\n{InstallerNetwork.SafeSummary(ex)}", "HM AppKit 更新", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         finally
         {

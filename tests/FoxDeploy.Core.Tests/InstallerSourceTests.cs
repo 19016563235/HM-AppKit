@@ -189,13 +189,13 @@ internal static class InstallerSourceTests
                     new SourceProgress<InstallUpdate>(_ => { }), new SourceProgress<string>(_ => { }));
                 Check(runner.Requests.Single().FileName == source && runner.Requests[0].WorkingDirectory == Path.GetDirectoryName(source), "Source working directory was inherited or changed to the target drive.");
             });
-            await test("Manual direct installer still fails a mismatched final directory", async () =>
+            await test("Manual direct installer still reports a mismatched final directory", async () =>
             {
                 var updates = new List<InstallUpdate>(); var runner = new SourceRunner();
                 var manual = app with { LocalInstaller = localProfile with { SilentSupported = false, LocationSupported = false } };
                 await Engine(runner, new SourceProbe([new(app.Name, Path.Combine(fixture, "Wrong"), "test")]), new SourcePayload(installer)).RunAsync(
                     [new InstallRequest(manual, target)], Local(silent: false), new SourceProgress<InstallUpdate>(updates.Add), new SourceProgress<string>(_ => { }));
-                Check(updates[^1].State == InstallState.Failed && runner.Requests.Count == 1, "A manual wizard cannot bypass final directory verification");
+                Check(updates[^1].State == InstallState.LocationMismatch && runner.Requests.Count == 1, "A manual wizard cannot bypass final directory verification");
             });
             await test("Payload preparation failure prevents execution and allows the next queue entry", async () =>
             {

@@ -22,11 +22,12 @@ public sealed class SelfUpdateClient : IDisposable
     private readonly SelfUpdateOptions _options;
     private readonly HttpClient _http;
     private readonly Action<string, string> _verifyExecutable;
+    private readonly Func<TimeSpan, CancellationToken, Task>? _retryDelay;
     private string? _releaseETag;
     private byte[]? _releaseJson;
 
     public SelfUpdateClient(SelfUpdateOptions? options = null, HttpMessageHandler? handler = null,
-        Action<string, string>? executableVersionVerifier = null)
+        Action<string, string>? executableVersionVerifier = null, Func<TimeSpan, CancellationToken, Task>? retryDelay = null)
     {
         _options = options ?? new SelfUpdateOptions();
         if (_options.MaximumPackageBytes <= 0 || _options.MaximumExtractedBytes <= 0 || _options.MaximumArchiveEntries <= 0 ||
@@ -34,6 +35,7 @@ public sealed class SelfUpdateClient : IDisposable
         _http = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false }, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("HM-AppKit-Updater/0.6");
         _verifyExecutable = executableVersionVerifier ?? VerifyExecutableVersion;
+        _retryDelay = retryDelay;
     }
 
     public async Task<SelfUpdateRelease?> CheckForUpdateAsync(string currentVersion, CancellationToken cancellationToken = default)
@@ -41,11 +43,17 @@ public sealed class SelfUpdateClient : IDisposable
         if (!SelfUpdateVersion.TryParse(currentVersion, out var current)) throw new ArgumentException("当前应用版本无效。", nameof(currentVersion));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_options.CheckTimeout);
+        return await InstallerNetwork.ExecuteAsync(token => CheckReleaseAttemptAsync(current, token),
+            "HM AppKit 版本查询", LatestReleaseUri, null, null, timeout.Token, _retryDelay).ConfigureAwait(false);
+    }
+
+    private async Task<SelfUpdateRelease?> CheckReleaseAttemptAsync(SelfUpdateVersion current, CancellationToken token)
+    {
         using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
         if (_releaseJson is not null && _releaseETag is not null) request.Headers.TryAddWithoutValidation("If-None-Match", _releaseETag);
-        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+        using var response = await SendRequestAsync(request, "HM AppKit 版本查询", token).ConfigureAwait(false);
         ValidateResponseUri(response, LatestReleaseUri, api: true);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         byte[] bytes;
@@ -53,8 +61,8 @@ public sealed class SelfUpdateClient : IDisposable
             bytes = _releaseJson ?? throw new InvalidDataException("GitHub 返回了无法复用的更新响应。");
         else
         {
-            EnsureSuccess(response);
-            bytes = await ReadBoundedAsync(response, MetadataLimit, timeout.Token).ConfigureAwait(false);
+            EnsureSuccess(response, LatestReleaseUri);
+            bytes = await ReadBoundedAsync(response, MetadataLimit, token).ConfigureAwait(false);
         }
         using var document = JsonDocument.Parse(bytes);
         var result = ParseRelease(document.RootElement, current);
@@ -74,6 +82,14 @@ public sealed class SelfUpdateClient : IDisposable
         timeout.CancelAfter(_options.DownloadTimeout);
         var token = timeout.Token;
         token.ThrowIfCancellationRequested();
+        var retryLog = progress is null ? null : new RetryProgress(progress, release.PackageBytes);
+        return await InstallerNetwork.ExecuteAsync(ct => DownloadAndStageAttemptAsync(release, progress, ct),
+            "HM AppKit 更新包准备", release.PackageUri, retryLog, null, token, _retryDelay).ConfigureAwait(false);
+    }
+
+    private async Task<SelfUpdatePackage> DownloadAndStageAttemptAsync(SelfUpdateRelease release,
+        IProgress<SelfUpdateProgress>? progress, CancellationToken token)
+    {
         var stagingRoot = Path.GetFullPath(_options.StagingRoot);
         EnsureNoReparsePoints(stagingRoot);
         Directory.CreateDirectory(stagingRoot);
@@ -93,13 +109,13 @@ public sealed class SelfUpdateClient : IDisposable
             {
                 if (packageResponse.Content.Headers.ContentLength is long length && length != release.PackageBytes)
                     throw new InvalidDataException("更新包大小与 GitHub 发布信息不一致。");
-                await using var input = await packageResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                await using var input = await OpenBodyAsync(packageResponse, token).ConfigureAwait(false);
                 await using var output = new FileStream(zipPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new byte[128 * 1024];
                 long received = 0;
                 int count;
-                while ((count = await input.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
+                while ((count = await ReadBodyAsync(input, buffer, packageResponse, token).ConfigureAwait(false)) != 0)
                 {
                     received += count;
                     if (received > release.PackageBytes || received > _options.MaximumPackageBytes) throw new InvalidDataException("更新包超过允许的大小。");
@@ -107,7 +123,8 @@ public sealed class SelfUpdateClient : IDisposable
                     await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
                     progress?.Report(new(received, release.PackageBytes, "正在下载 HM AppKit 更新…"));
                 }
-                if (received != release.PackageBytes) throw new InvalidDataException("更新包下载不完整。");
+                if (received != release.PackageBytes) throw InstallerNetwork.ReadFailure(new EndOfStreamException("更新包下载不完整。"),
+                    "HM AppKit 更新包读取", packageResponse.RequestMessage?.RequestUri ?? release.PackageUri);
                 var actualHash = Convert.ToHexString(hash.GetHashAndReset());
                 if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("更新包 SHA-256 校验失败，已停止更新。");
                 await output.FlushAsync(token).ConfigureAwait(false);
@@ -180,7 +197,7 @@ public sealed class SelfUpdateClient : IDisposable
         {
             ValidateAssetHost(uri);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            var response = await SendRequestAsync(request, "HM AppKit 更新附件请求", token).ConfigureAwait(false);
             try
             {
                 ValidateResponseUri(response, uri, api: false);
@@ -194,7 +211,7 @@ public sealed class SelfUpdateClient : IDisposable
                     response.Dispose();
                     continue;
                 }
-                EnsureSuccess(response);
+                EnsureSuccess(response, uri);
                 return response;
             }
             catch { response.Dispose(); throw; }
@@ -345,26 +362,59 @@ public sealed class SelfUpdateClient : IDisposable
         if (!api) ValidateAssetHost(actual);
     }
 
-    private static void EnsureSuccess(HttpResponseMessage response)
+    private static void EnsureSuccess(HttpResponseMessage response, Uri requested)
     {
-        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
-            throw new HttpRequestException("GitHub 更新检查暂时受限，请稍后重试。", null, response.StatusCode);
-        response.EnsureSuccessStatusCode();
+        try { response.EnsureSuccessStatusCode(); }
+        catch (HttpRequestException ex) { throw InstallerNetwork.WithContext(ex, "HM AppKit 更新响应", response.RequestMessage?.RequestUri ?? requested); }
     }
 
     private static async Task<byte[]> ReadBoundedAsync(HttpResponseMessage response, int limit, CancellationToken token)
     {
         if (response.Content.Headers.ContentLength is long length && length > limit) throw new InvalidDataException("GitHub 更新信息超过大小限制。");
-        await using var input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+        await using var input = await OpenBodyAsync(response, token).ConfigureAwait(false);
         using var output = new MemoryStream();
         var buffer = new byte[16 * 1024];
         int count;
-        while ((count = await input.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
+        while ((count = await ReadBodyAsync(input, buffer, response, token).ConfigureAwait(false)) != 0)
         {
             if (output.Length + count > limit) throw new InvalidDataException("GitHub 更新信息超过大小限制。");
             output.Write(buffer, 0, count);
         }
+        if (response.Content.Headers.ContentLength is long expected)
+        {
+            if (output.Length > expected) throw new InvalidDataException("更新信息响应超过声明长度。");
+            if (output.Length < expected)
+                throw InstallerNetwork.ReadFailure(new EndOfStreamException("更新信息响应不完整。"), "HM AppKit 更新信息读取", response.RequestMessage?.RequestUri);
+        }
         return output.ToArray();
+    }
+
+    private async Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, string stage, CancellationToken token)
+    {
+        try { return await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Security.Authentication.AuthenticationException)
+        { throw InstallerNetwork.WithContext(ex, stage, request.RequestUri); }
+    }
+
+    private static async Task<Stream> OpenBodyAsync(HttpResponseMessage response, CancellationToken token)
+    {
+        try { return await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false); }
+        catch (OperationCanceledException ex) { throw InstallerNetwork.WithContext(ex, "HM AppKit 更新响应读取", response.RequestMessage?.RequestUri); }
+        catch (Exception ex) when (ex is IOException or HttpRequestException)
+        { throw InstallerNetwork.ReadFailure(ex, "HM AppKit 更新响应读取", response.RequestMessage?.RequestUri); }
+    }
+
+    private static async Task<int> ReadBodyAsync(Stream input, byte[] buffer, HttpResponseMessage response, CancellationToken token)
+    {
+        try { return await input.ReadAsync(buffer, token).ConfigureAwait(false); }
+        catch (OperationCanceledException ex) { throw InstallerNetwork.WithContext(ex, "HM AppKit 更新响应读取", response.RequestMessage?.RequestUri); }
+        catch (Exception ex) when (ex is IOException or HttpRequestException)
+        { throw InstallerNetwork.ReadFailure(ex, "HM AppKit 更新响应读取", response.RequestMessage?.RequestUri); }
+    }
+
+    private sealed class RetryProgress(IProgress<SelfUpdateProgress> progress, long total) : IProgress<string>
+    {
+        public void Report(string value) => progress.Report(new(0, total, value));
     }
 
     private static void EnsureNoReparsePoints(string path)

@@ -51,10 +51,10 @@ public static class DiagnosticsTests
                 "The UI must not append the already logged short failure a second time.");
             Check(FinalFor(result, second).State == InstallState.Unverified && runner.Requests.Count == 1,
                 "The next app is executed exactly once; a fake reboot result remains unverified.");
-            Check(FinalFor(result, installed).State == InstallState.AlreadyInstalled && !FinalFor(result, installed).IsLogged,
-                "Already-installed skipping remains a normal loggable progress event.");
+            Check(FinalFor(result, installed).State == InstallState.LocationMismatch && !FinalFor(result, installed).IsLogged,
+                "Already-installed skipping retains a visible directory mismatch as a normal loggable progress event.");
             Check(provider.AppIds.SequenceEqual([first.Id, second.Id]), "Installed apps must not download, and failed apps must not start a second installer.");
-            Check(result.Updates.Where(update => update.State is InstallState.Pending or InstallState.Checking or InstallState.Installing or InstallState.AlreadyInstalled)
+            Check(result.Updates.Where(update => update.State is InstallState.Pending or InstallState.Checking or InstallState.Installing or InstallState.AlreadyInstalled or InstallState.LocationMismatch)
                 .All(update => !update.IsLogged), "Normal business progress must not be suppressed by the error deduplication flag.");
             RejectSecrets(string.Join('\n', result.CombinedLogs.Concat(result.Updates.Select(update => update.Message))));
         });

@@ -42,7 +42,7 @@ public sealed record DriveSnapshot(string Name, string Root, bool IsReady, long 
     public bool IsVirtual { get; init; }
     public string BusType { get; init; } = "Unknown";
 }
-public enum InstallState { Pending, Checking, Installing, Succeeded, AlreadyInstalled, Failed, Skipped, Cancelled, Unverified }
+public enum InstallState { Pending, Checking, Installing, Succeeded, AlreadyInstalled, Failed, Skipped, Cancelled, Unverified, LocationMismatch, ExistingUnverified }
 public sealed record InstallUpdate(string AppId, InstallState State, string Message, string? TargetDirectory = null)
 {
     public bool IsLogged { get; init; }
