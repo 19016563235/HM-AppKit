@@ -326,7 +326,9 @@ public partial class MainWindow : Window
     private void UpdateRowPath(AppRow row)
     {
         var capabilities = InstallerSources.GetCapabilities(row.App, _settings);
-        row.UpdateSource(capabilities, InstallerSources.GetProfile(row.App, _settings)?.InteractiveFallback == true);
+        var profile = InstallerSources.GetProfile(row.App, _settings);
+        var usesSilent = _settings.Silent && capabilities.SilentSupported && profile?.Adapter != "jingmai";
+        row.UpdateSource(capabilities, profile?.InteractiveFallback == true, usesSilent);
         try
         {
             row.PathHint = DriveResolver.ResolveTarget(row.App, row.TargetPath, _settings, _drives);
@@ -672,17 +674,19 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     private string _statusBackground = "#FFFFFF";
     private InstallerCapabilities _capabilities = new(false, false, false, "", "正在检查安装源。");
     private bool _interactiveFallback;
+    private bool _usesSilent;
     public AppDefinition App { get; } = app;
     public ImageSource? Logo { get; } = AppLogoAssets.Get(app.Id);
     public string Detail => $"{App.Category} · {App.Description}";
     public string Initial => string.IsNullOrEmpty(App.Name) ? "+" : App.Name[..1].ToUpperInvariant();
     public string IconBackground => App.Category switch { "公共" => "#EEF2FF", "运营" => "#FFF3E8", "客服" => "#EAF5F0", "短视频" => "#F3EEFC", _ => "#EDF1F7" };
     public string IconColor => App.Category switch { "公共" => "#667DD3", "运营" => "#C18A52", "客服" => "#62A187", "短视频" => "#9475B9", _ => "#8192AB" };
-    public string SilentLabel => _interactiveFallback ? "常规安装·预填目录" : _capabilities.SilentSupported ? "支持静默" : "需手动安装";
-    public string LocationLabel => _interactiveFallback ? "向导将预填目标目录，请确认后安装" : _capabilities.LocationSupported ? "可指定目录" : "请在安装向导中选择此目标目录";
-    public string SourceLabel => $"{(App.OnlineInstaller is not null ? "自动缓存" : _capabilities.SourceLabel)} · {(!_capabilities.IsAvailable ? "暂不可用" : SilentLabel)}";
+    public string InstallModeLabel => _usesSilent ? "静默" : "常规";
+    public string InstallModeColor => _usesSilent ? "#228867" : "#8490A2";
+    public string InstallModeBackground => _usesSilent ? "#E8F7F0" : "#F0F2F6";
+    public string SilentLabel => _usesSilent ? "静默安装" : _interactiveFallback ? "常规安装·预填目录" : "常规安装";
+    public string LocationLabel => _interactiveFallback && !_usesSilent ? "向导将预填目标目录，请确认后安装" : _capabilities.LocationSupported ? "可指定目录" : "请在安装向导中选择此目标目录";
     public string SourceHint => $"{_capabilities.Message}\n{SilentLabel} · {LocationLabel}" + (App.OnlineInstaller is not null ? $"\n安装时检查官方更新，校验并复用缓存。\n{Path.Combine(AppContext.BaseDirectory, "Local Installer")}" : "");
-    public string SourceColor => _capabilities.IsAvailable ? "#94A0B1" : "#BD925E";
     public bool Selected { get => _selected; set => Set(ref _selected, value); }
     public bool IsEditable { get => _isEditable; set => Set(ref _isEditable, value); }
     public string TargetPath { get => _targetPath; set { Set(ref _targetPath, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PathModeLabel))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasCustomPath))); } }
@@ -697,11 +701,12 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     public string StatusColor { get => _statusColor; private set => Set(ref _statusColor, value); }
     public string StatusBackground { get => _statusBackground; private set => Set(ref _statusBackground, value); }
     public InstallState State { get; private set; } = InstallState.Pending;
-    public void UpdateSource(InstallerCapabilities capabilities, bool interactiveFallback)
+    public void UpdateSource(InstallerCapabilities capabilities, bool interactiveFallback, bool usesSilent)
     {
         _capabilities = capabilities;
         _interactiveFallback = interactiveFallback;
-        foreach (var property in new[] { nameof(SourceLabel), nameof(SourceHint), nameof(SourceColor), nameof(CapabilitiesHint), nameof(SilentLabel), nameof(LocationLabel) })
+        _usesSilent = usesSilent;
+        foreach (var property in new[] { nameof(InstallModeLabel), nameof(InstallModeColor), nameof(InstallModeBackground), nameof(SourceHint), nameof(CapabilitiesHint), nameof(SilentLabel), nameof(LocationLabel) })
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
     }
     public void SetStatus(InstallState state, string message)

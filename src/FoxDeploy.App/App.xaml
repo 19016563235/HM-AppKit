@@ -13,6 +13,135 @@
     </Style>
     <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="#7C889C" /><Setter Property="FontSize" Value="11" /><Setter Property="Padding" Value="9,5" /></Style>
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource Accent}" /><Setter Property="BorderBrush" Value="{StaticResource Accent}" /><Setter Property="Foreground" Value="White" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+    <Style x:Key="EditIconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Width" Value="28" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="#8190A8" />
+      <Setter Property="AutomationProperties.Name" Value="修改" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="EditSurface" CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
+              <Path x:Name="EditGlyph" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.45" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M3,10.8 L3.7,7.9 L10,1.6 C10.5,1.1 11.3,1.1 11.8,1.6 L12.4,2.2 C12.9,2.7 12.9,3.5 12.4,4 L6.1,10.3 Z M9,2.6 L11.4,5 M3.7,7.9 L6.1,10.3 M2.5,12.8 L12.8,12.8" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#EDF2FF" /><Setter TargetName="EditGlyph" Property="Stroke" Value="{StaticResource Accent}" /></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#E2E9FF" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="EditSurface" Property="BorderBrush" Value="#8299ED" /><Setter TargetName="EditSurface" Property="Background" Value="#F0F4FF" /></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="EditSurface" Property="Opacity" Value="0.38" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="AppSelectionDot" TargetType="CheckBox">
+      <Setter Property="Width" Value="20" /><Setter Property="Height" Value="20" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" /><Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <Grid x:Name="SelectionSurface" Background="Transparent" SnapsToDevicePixels="True">
+              <Border x:Name="SelectionFocus" Margin="-2" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" IsHitTestVisible="False" />
+              <Border x:Name="SelectionCircle" Width="17" Height="17" CornerRadius="8.5" Background="White" BorderBrush="#C8D1E0" BorderThickness="1.4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#849BED" /><Setter TargetName="SelectionCircle" Property="Background" Value="#F4F7FF" /></Trigger>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SelectionCircle" Property="Background" Value="{StaticResource Accent}" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="{StaticResource Accent}" /></Trigger>
+              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SelectionCircle" Property="Background" Value="#A6B6F1" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#A6B6F1" /></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.76" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SelectionFocus" Property="BorderBrush" Value="#8299ED" /></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.4" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="IosSwitch" TargetType="CheckBox">
+      <Setter Property="Cursor" Value="Hand" /><Setter Property="Foreground" Value="#718096" /><Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <Grid x:Name="SwitchSurface" Background="Transparent" SnapsToDevicePixels="True">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="40" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Grid Height="26" Width="40" VerticalAlignment="Center">
+                <Border x:Name="SwitchFocus" CornerRadius="13" BorderThickness="1" BorderBrush="Transparent" IsHitTestVisible="False" />
+                <Border x:Name="SwitchRail" Width="34" Height="20" CornerRadius="10" Background="#C8D0DD" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <Border x:Name="SwitchThumb" Width="16" Height="16" Margin="2" CornerRadius="8" Background="White" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                </Border>
+              </Grid>
+              <ContentPresenter Grid.Column="1" ContentSource="Content" RecognizesAccessKey="True" Margin="6,0,0,0" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SwitchRail" Property="Background" Value="#34C759" /><Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" /></Trigger>
+              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Center" /></Trigger>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SwitchRail" Property="Opacity" Value="0.88" /></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="SwitchRail" Property="Opacity" Value="0.76" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchFocus" Property="BorderBrush" Value="#8299ED" /></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SwitchSurface" Property="Opacity" Value="0.4" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="ScrollPageButton" TargetType="RepeatButton">
+      <Setter Property="Focusable" Value="False" /><Setter Property="IsTabStop" Value="False" /><Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="{TemplateBinding Background}" /></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="ScrollThumb" TargetType="Thumb">
+      <Setter Property="Background" Value="#C7D0DE" /><Setter Property="MinHeight" Value="22" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Thumb">
+            <Border Background="Transparent" SnapsToDevicePixels="True"><Border x:Name="ThumbBody" Background="{TemplateBinding Background}" CornerRadius="3" Margin="3,0" /></Border>
+            <ControlTemplate.Triggers>
+              <DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="Horizontal"><Setter TargetName="ThumbBody" Property="Margin" Value="0,3" /></DataTrigger>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbBody" Property="Background" Value="#A5B3C8" /></Trigger>
+              <Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbBody" Property="Background" Value="#899DBB" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers><DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="Horizontal"><Setter Property="MinHeight" Value="0" /><Setter Property="MinWidth" Value="22" /></DataTrigger></Style.Triggers>
+    </Style>
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="10" /><Setter Property="MinWidth" Value="0" /><Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="Transparent" /><Setter Property="Focusable" Value="False" /><Setter Property="IsTabStop" Value="False" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Grid x:Name="ScrollSurface" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+              <Border x:Name="ScrollFocus" CornerRadius="5" BorderThickness="1" BorderBrush="Transparent" IsHitTestVisible="False" />
+              <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
+                <Track.DecreaseRepeatButton><RepeatButton x:Name="PageDecrease" Style="{StaticResource ScrollPageButton}" Command="{x:Static ScrollBar.PageUpCommand}" CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}" /></Track.DecreaseRepeatButton>
+                <Track.Thumb><Thumb Style="{StaticResource ScrollThumb}" /></Track.Thumb>
+                <Track.IncreaseRepeatButton><RepeatButton x:Name="PageIncrease" Style="{StaticResource ScrollPageButton}" Command="{x:Static ScrollBar.PageDownCommand}" CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}" /></Track.IncreaseRepeatButton>
+              </Track>
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="Orientation" Value="Horizontal"><Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" /><Setter TargetName="PageDecrease" Property="Command" Value="{x:Static ScrollBar.PageLeftCommand}" /><Setter TargetName="PageIncrease" Property="Command" Value="{x:Static ScrollBar.PageRightCommand}" /></Trigger>
+              <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ScrollFocus" Property="BorderBrush" Value="#A6B7EF" /></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ScrollSurface" Property="Opacity" Value="0.35" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto" /><Setter Property="Height" Value="10" /></Trigger></Style.Triggers>
+    </Style>
+    <Style TargetType="ScrollViewer">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollViewer">
+            <Grid Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Row="0" Grid.Column="0" Margin="{TemplateBinding Padding}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" ContentStringFormat="{TemplateBinding ContentStringFormat}" CanContentScroll="{TemplateBinding CanContentScroll}" />
+              <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Row="0" Grid.Column="1" Orientation="Vertical" Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+              <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Minimum="0" Maximum="{TemplateBinding ScrollableWidth}" ViewportSize="{TemplateBinding ViewportWidth}" Value="{Binding HorizontalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style TargetType="TextBox"><Setter Property="Padding" Value="10,7" /><Setter Property="Background" Value="White" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="BorderBrush" Value="#E4E9F1" /><Setter Property="BorderThickness" Value="1" /><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" /></Border><ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="BorderBrush" Value="#91A6F4" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
     <Style TargetType="CheckBox"><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Cursor" Value="Hand" /><Setter Property="Foreground" Value="#718096" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Border x:Name="CheckBorder" Width="16" Height="16" CornerRadius="4" Background="White" BorderBrush="#D1D9E7" BorderThickness="1"><TextBlock x:Name="CheckGlyph" Text="✓" Foreground="White" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" /></Border><ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" /></StackPanel><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckBorder" Property="Background" Value="{StaticResource Accent}" /><Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource Accent}" /><Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" /></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="#8299ED" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
     <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="White" /><Setter Property="BorderBrush" Value="{StaticResource Line}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="13" /></Style>

@@ -1,0 +1,124 @@
+{
+  "Application": "HM AppKit",
+  "Version": "0.8.0",
+  "Date": "2026-10-16",
+  "CoreRegressionTests": {
+    "Core": 118,
+    "Jingmai": 24,
+    "Cache": 35,
+    "UpdateDownload": 42,
+    "UpdateApply": 33,
+    "Passed": 252,
+    "Failed": 0
+  },
+  "InterfaceBehavior": {
+    "Passed": 20,
+    "Failed": 0,
+    "Mode": "Isolated in-process WPF controls; no vendor install and no user input injection",
+    "Checks": [
+      {
+        "Name": "Small normal window",
+        "Pass": true
+      },
+      {
+        "Name": "Both settings use iOS templates",
+        "Pass": true
+      },
+      {
+        "Name": "Settings retain current enabled defaults",
+        "Pass": true
+      },
+      {
+        "Name": "All eleven catalog apps visible",
+        "Pass": true
+      },
+      {
+        "Name": "Silent supported apps have green badges",
+        "Pass": true
+      },
+      {
+        "Name": "Jingmai has gray regular badge",
+        "Pass": true
+      },
+      {
+        "Name": "Turning silent off updates every badge",
+        "Pass": true
+      },
+      {
+        "Name": "Turning silent on restores supported badges",
+        "Pass": true
+      },
+      {
+        "Name": "Every card uses independent circular selector",
+        "Pass": true
+      },
+      {
+        "Name": "Multiple selections can be cleared independently",
+        "Pass": true
+      },
+      {
+        "Name": "Multiple selections can be restored independently",
+        "Pass": true
+      },
+      {
+        "Name": "All card editors have icon-only content and names",
+        "Pass": true
+      },
+      {
+        "Name": "Root edit is icon-only",
+        "Pass": true
+      },
+      {
+        "Name": "Card edit opens and cancels without changing selections",
+        "Pass": true
+      },
+      {
+        "Name": "App scroll area uses custom track without arrow buttons",
+        "Pass": true
+      },
+      {
+        "Name": "Scrollbar page command advances content",
+        "Pass": true
+      },
+      {
+        "Name": "Thumb drag events advance content",
+        "Pass": true
+      },
+      {
+        "Name": "Search still filters through custom text scroll host",
+        "Pass": true
+      },
+      {
+        "Name": "Log uses custom scrollbar and scrolls",
+        "Pass": true
+      },
+      {
+        "Name": "Progress has descriptive accessible name",
+        "Pass": true
+      }
+    ]
+  },
+  "VisualChecks": [
+    "Public role at 1010x680",
+    "All roles at 1010x680",
+    "Expanded log with custom scrolling",
+    "Silent switch off with gray regular badges"
+  ],
+  "Logo": {
+    "OriginalPngPreserved": true,
+    "PngSha256": "820A07E753CE264AC6335047F6226F67376C2F402A3258165DDB4A8C9A5B6D7F",
+    "IcoSha256": "C5D5E425D422404B8970B612521B09526044C8FC43F131FBDDA92C9B19CA21AB",
+    "IcoSizes": [
+      16,
+      24,
+      32,
+      48,
+      64,
+      128,
+      256
+    ],
+    "PreservedAlpha": true
+  },
+  "UserConfigurationUnchanged": true,
+  "VendorInstallerExecuted": false
+}

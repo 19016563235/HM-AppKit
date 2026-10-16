@@ -1,6 +1,6 @@
 # Application artwork
 
-`HM-AppKit.svg` is the editable source for the HM monogram. The PNG and multi-resolution ICO use the same vector geometry; the ICO includes 16, 24, 32, 48, 64, 128, and 256 px entries.
+`HM-AppKit.png` is the user-supplied artwork adopted in v0.8, preserved byte for byte with its original transparency and full canvas. `HM-AppKit.ico` is derived from that PNG and contains 16, 24, 32, 48, 64, 128, and 256 px entries. Regenerate it with `scripts/Update-AppIcon.ps1 -SourcePng <path-to-source.png>` from the repository root. The older SVG is a historical reference and is not used by the application or icon conversion.
 
 The application logos identify the listed products. They were extracted read-only from existing official applications or the user's official installation packages. No installation package is bundled with these resources and no application is executed to obtain its icon.
 
