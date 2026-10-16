@@ -210,8 +210,42 @@ function Invoke-HmHttp {
     }
 }
 
-function Invoke-HmGit {
-    param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate, [switch]$AllowFailure)
+function Get-HmGitReadOperation([string[]]$Arguments) {
+    if ($Arguments.Count -lt 3 -or $Arguments[2] -cnotin @(
+        'https://github.com/19016563235/HM-AppKit.git', 'https://gitee.com/huanmeng-it/HM-AppKit.git')) { return '' }
+    if ($Arguments.Count -eq 5 -and $Arguments[0] -ceq 'ls-remote' -and $Arguments[1] -ceq '--refs' -and
+        $Arguments[3] -ceq 'refs/heads/main' -and $Arguments[4] -ceq 'refs/tags/*') { return 'git-read-refs' }
+    if ($Arguments.Count -notin @(4, 5) -or $Arguments[0] -cne 'fetch' -or $Arguments[1] -cne '--no-tags' -or
+        $Arguments[3] -cnotmatch '^refs/heads/main:(?<scope>refs/hm-gitee-sync/[0-9a-f]{32})/(main|gitee-main)$') { return '' }
+    $scope = $Matches['scope']
+    if ($Arguments.Count -eq 5 -and $Arguments[4] -cne "refs/tags/*:$scope/tags/*") { return '' }
+    return 'git-fetch-temp'
+}
+
+function Test-HmGitTransientFailure([string]$Diagnostic) {
+    # Inspect only in memory. Authentication, history, and configuration errors must stop.
+    if ($Diagnostic -match '(?i)authentication|permission denied|access denied|returned error:\s*(401|403)\b|repository.*not found|does not appear to be a git repository|non-fast-forward|\[rejected\]') { return $false }
+    return $Diagnostic -match '(?i)could not resolve (host|proxy)|failed to connect|connection (timed out|reset|refused|aborted|was reset)|operation timed out|empty reply from server|early EOF|remote end hung up unexpectedly|curl (18|28|35|52|55|56|92)\b|requested URL returned error:\s*(408|429|5[0-9]{2})\b|TLS connection.*(terminated|closed)|SSL_ERROR_SYSCALL'
+}
+
+function Stop-HmGitProcess([Diagnostics.Process]$Process, [Threading.Tasks.Task]$Stdout, [Threading.Tasks.Task]$Stderr) {
+    try {
+        if (-not $Process.HasExited) {
+            try { $Process.Kill($true) } catch { if (-not $Process.HasExited) { throw } }
+        }
+        if (-not $Process.WaitForExit(10000)) { throw 'Owned Git process has not exited.' }
+        $drain = [Threading.Tasks.Task]::WhenAll([Threading.Tasks.Task[]]@($Stdout, $Stderr))
+        if (-not $drain.Wait(10000)) { throw 'Owned Git output pipes have not closed.' }
+        $null = $drain.GetAwaiter().GetResult()
+    } catch {
+        $failure = [InvalidOperationException]::new('Unable to confirm Git process shutdown and output cleanup; no further attempts will be made.')
+        $failure.Data['HmGitTerminationUnconfirmed'] = $true
+        throw $failure
+    }
+}
+
+function Invoke-HmGitAttempt {
+    param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate)
     $info = [Diagnostics.ProcessStartInfo]::new('git')
     $info.WorkingDirectory = $WorkingDirectory
     $info.UseShellExecute = $false
@@ -243,16 +277,35 @@ function Invoke-HmGit {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
         if (-not $process.WaitForExit(180000)) {
-            $process.Kill($true)
-            throw 'Git operation timed out. No credentials or Git diagnostics are printed; rerun safely.'
+            Stop-HmGitProcess $process $stdout $stderr
+            return [pscustomobject]@{ ExitCode = 124; Output = ''; TransientNetworkFailure = $true; TimedOut = $true }
         }
         $output = $stdout.GetAwaiter().GetResult()
-        $null = $stderr.GetAwaiter().GetResult()
-        if ($process.ExitCode -ne 0 -and -not $AllowFailure) {
+        $diagnostic = $stderr.GetAwaiter().GetResult()
+        return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output; TransientNetworkFailure = (Test-HmGitTransientFailure $diagnostic); TimedOut = $false }
+    } finally { $process.Dispose() }
+}
+
+function Invoke-HmGit {
+    param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate, [switch]$AllowFailure)
+    $phase = Get-HmGitReadOperation $Arguments
+    $attempts = if ($phase -and -not $Authenticate) { 3 } else { 1 }
+    if (-not $phase -and $Arguments.Count -gt 0 -and $Arguments[0] -ceq 'push') { $phase = 'git-push' }
+    for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+        if ($phase) { Write-Host ('HM sync phase={0} event=start attempt={1}/{2}' -f $phase, $attempt, $attempts) }
+        $result = Invoke-HmGitAttempt -Arguments $Arguments -WorkingDirectory $WorkingDirectory -Authenticate:$Authenticate
+        $retry = $result.ExitCode -ne 0 -and $result.TransientNetworkFailure -and $attempt -lt $attempts
+        if ($phase) {
+            $outcome = if ($result.ExitCode -eq 0) { 'complete' } elseif ($retry) { 'retry' } else { 'failed' }
+            Write-Host ('HM sync phase={0} event={1} attempt={2}/{3} exitcode={4}' -f $phase, $outcome, $attempt, $attempts, $result.ExitCode)
+        }
+        if ($retry) { Start-Sleep -Seconds $attempt; continue }
+        if ($result.ExitCode -ne 0 -and -not $AllowFailure) {
+            if ($result.TimedOut) { throw 'Git operation timed out. No credentials or Git diagnostics are printed; rerun safely.' }
             throw 'Git operation failed. Check repository permissions, branch protection, and fast-forward history; no credentials or Git diagnostics are printed.'
         }
-        return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output }
-    } finally { $process.Dispose() }
+        return $result
+    }
 }
 
 function ConvertTo-HmRefs([string]$Listing) {
@@ -268,6 +321,7 @@ function ConvertTo-HmRefs([string]$Listing) {
 
 function Sync-HmGitCode([string]$Root, [switch]$ReadOnly) {
     $namespace = 'refs/hm-gitee-sync/' + [guid]::NewGuid().ToString('N')
+    $cleanupSafe = $true
     try {
         $source = ConvertTo-HmRefs (Invoke-HmGit -Arguments @('ls-remote', '--refs', $script:HmGitHub, 'refs/heads/main', 'refs/tags/*') -WorkingDirectory $Root).Output
         $target = ConvertTo-HmRefs (Invoke-HmGit -Arguments @('ls-remote', '--refs', $script:HmGitee, 'refs/heads/main', 'refs/tags/*') -WorkingDirectory $Root).Output
@@ -301,10 +355,15 @@ function Sync-HmGitCode([string]$Root, [switch]$ReadOnly) {
             }
         }
         return [pscustomobject]@{ Main = $fetchedMain; Tags = @($source.Keys | Where-Object { $_ -like 'refs/tags/*' }).Count; ReferencesToUpdate = $updates.Count; PlanOnly = [bool]$ReadOnly }
+    } catch {
+        if ($_.Exception.Data.Contains('HmGitTerminationUnconfirmed')) { $cleanupSafe = -not [bool]$_.Exception.Data['HmGitTerminationUnconfirmed'] }
+        throw
     } finally {
-        $local = Invoke-HmGit -Arguments @('for-each-ref', '--format=%(refname)', $namespace) -WorkingDirectory $Root -AllowFailure
-        foreach ($ref in ($local.Output -split '\r?\n')) {
-            if ($ref.StartsWith($namespace + '/', [StringComparison]::Ordinal)) { $null = Invoke-HmGit -Arguments @('update-ref', '-d', $ref) -WorkingDirectory $Root }
+        if ($cleanupSafe) {
+            $local = Invoke-HmGit -Arguments @('for-each-ref', '--format=%(refname)', $namespace) -WorkingDirectory $Root -AllowFailure
+            foreach ($ref in ($local.Output -split '\r?\n')) {
+                if ($ref.StartsWith($namespace + '/', [StringComparison]::Ordinal)) { $null = Invoke-HmGit -Arguments @('update-ref', '-d', $ref) -WorkingDirectory $Root }
+            }
         }
     }
 }

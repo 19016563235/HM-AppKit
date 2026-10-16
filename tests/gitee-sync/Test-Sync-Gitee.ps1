@@ -30,6 +30,7 @@ function New-TestZip([string]$Path, [string[]]$Entries = @('HM AppKit.exe', 'Dat
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('HM-AppKit-Gitee-Tests-' + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $testRoot
 $originalHttp = (Get-Item Function:Invoke-HmHttp).ScriptBlock
+$originalGitAttempt = (Get-Item Function:Invoke-HmGitAttempt).ScriptBlock
 $originalSleep = Get-Item Function:Start-Sleep -ErrorAction SilentlyContinue
 $originalGitHub = $script:HmGitHub; $originalGitee = $script:HmGitee
 $originalToken = $env:GITEE_TOKEN
@@ -223,6 +224,180 @@ try {
     Test-Case 'temporary fetched refs removed after conflict' { Assert-True ([string]::IsNullOrWhiteSpace((Invoke-HmGit -Arguments @('for-each-ref', 'refs/hm-gitee-sync') -WorkingDirectory $working).Output)) }
     $script:HmGitHub = $originalGitHub; $script:HmGitee = $originalGitee
 
+    Test-Case 'owned timeout process exits and output tasks drain before another attempt' {
+        $info = [Diagnostics.ProcessStartInfo]::new((Get-Command pwsh).Source)
+        $info.UseShellExecute = $false; $info.CreateNoWindow = $true
+        $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
+        $info.ArgumentList.Add('-NoProfile'); $info.ArgumentList.Add('-Command'); $info.ArgumentList.Add('Start-Sleep -Seconds 60')
+        $null = $info.Environment.Remove('GITEE_TOKEN')
+        $owned = [Diagnostics.Process]::new(); $owned.StartInfo = $info
+        try {
+            $null = $owned.Start()
+            $stdout = $owned.StandardOutput.ReadToEndAsync(); $stderr = $owned.StandardError.ReadToEndAsync()
+            Stop-HmGitProcess $owned $stdout $stderr
+            Assert-True ($owned.HasExited -and $stdout.IsCompletedSuccessfully -and $stderr.IsCompletedSuccessfully)
+        } finally { $owned.Dispose() }
+    }
+
+    # Fault injection stays below the real retry policy; no network process is started.
+    function Reset-GitMock {
+        $script:GitCalls = 0
+        $script:GitResults = [Collections.Generic.Queue[object]]::new()
+        $script:GitSleeps = [Collections.Generic.List[double]]::new()
+    }
+    function Add-GitResult([int]$ExitCode, [string]$Diagnostic = '', [string]$Output = '', [bool]$TimedOut = $false) {
+        $script:GitResults.Enqueue([pscustomobject]@{ ExitCode = $ExitCode; Output = $Output; TransientNetworkFailure = ($TimedOut -or (Test-HmGitTransientFailure $Diagnostic)); TimedOut = $TimedOut })
+    }
+    Set-Item Function:Start-Sleep -Value { param([double]$Seconds) $script:GitSleeps.Add($Seconds) }
+    Set-Item Function:Invoke-HmGitAttempt -Value {
+        param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate)
+        $script:GitCalls++
+        if ($script:GitResults.Count -eq 0) { throw 'Unexpected additional Git attempt.' }
+        return $script:GitResults.Dequeue()
+    }
+    $readArgs = @('ls-remote', '--refs', $originalGitHub, 'refs/heads/main', 'refs/tags/*')
+    $tempScope = 'refs/hm-gitee-sync/' + ('a' * 32)
+    $fetchArgs = @('fetch', '--no-tags', $originalGitHub, "refs/heads/main:$tempScope/main", "refs/tags/*:$tempScope/tags/*")
+    Test-Case 'only fixed public Git reads and temporary ref fetches qualify for retry' {
+        Assert-True ((Get-HmGitReadOperation $readArgs) -ceq 'git-read-refs')
+        Assert-True ((Get-HmGitReadOperation $fetchArgs) -ceq 'git-fetch-temp')
+        Assert-True ((Get-HmGitReadOperation @('fetch', '--no-tags', $originalGitee, "refs/heads/main:$tempScope/gitee-main")) -ceq 'git-fetch-temp')
+        foreach ($unsafe in @(
+            @('ls-remote', '--refs', 'https://other.example/repo.git', 'refs/heads/main', 'refs/tags/*'),
+            @('fetch', '--no-tags', $originalGitHub, 'refs/heads/main:refs/heads/main'),
+            @('fetch', '--no-tags', $originalGitHub, "refs/heads/main:$tempScope/main", 'refs/tags/*:refs/tags/*'),
+            @('fetch', '--no-tags', $originalGitHub, "refs/heads/main:$tempScope/main", "refs/tags/*:$tempScope/tags/*", '--prune'),
+            @('push', '--atomic', $originalGitee, 'main')
+        )) { Assert-True ([string]::IsNullOrEmpty((Get-HmGitReadOperation $unsafe))) }
+    }
+    Test-Case 'transient public ls-remote failure recovers with one bounded retry' {
+        Reset-GitMock; Add-GitResult 128 'fatal: unable to access repository: Recv failure: Connection was reset'; Add-GitResult 0 '' 'verified refs'
+        $result = Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot
+        Assert-True ($result.ExitCode -eq 0 -and $result.Output -ceq 'verified refs' -and $script:GitCalls -eq 2)
+        Assert-True ($script:GitSleeps.Count -eq 1 -and $script:GitSleeps[0] -eq 1)
+    }
+    Test-Case 'temporary namespace fetch recovers from a transient HTTP server error' {
+        Reset-GitMock; Add-GitResult 128 'fatal: unable to access repository: The requested URL returned error: 503'; Add-GitResult 0
+        Assert-True ((Invoke-HmGit -Arguments $fetchArgs -WorkingDirectory $testRoot).ExitCode -eq 0)
+        Assert-True ($script:GitCalls -eq 2)
+    }
+    Test-Case 'transient Git reads stop after three attempts and short backoffs' {
+        Reset-GitMock; 1..3 | ForEach-Object { Add-GitResult 128 'fatal: Could not resolve host: public.example' }
+        Assert-Fails { Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot } 'Git operation failed'
+        Assert-True ($script:GitCalls -eq 3 -and ($script:GitSleeps -join ',') -eq '1,2')
+    }
+    Test-Case 'read-only Git timeout may recover while preserving the existing attempt timeout' {
+        Reset-GitMock; Add-GitResult -ExitCode 124 -TimedOut $true; Add-GitResult 0
+        Assert-True ((Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot).ExitCode -eq 0)
+        Assert-True ($script:GitCalls -eq 2)
+    }
+    Test-Case 'authentication and denied access failures are not retried' {
+        foreach ($message in @('fatal: Authentication failed', 'fatal: HTTP Basic: Access denied', 'fatal: The requested URL returned error: 403')) {
+            Reset-GitMock; Add-GitResult 128 $message; Add-GitResult 0
+            Assert-Fails { Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot } 'Git operation failed'
+            Assert-True ($script:GitCalls -eq 1 -and $script:GitSleeps.Count -eq 0)
+        }
+    }
+    Test-Case 'history rejection is not retried even if its diagnostic mentions connection reset' {
+        Reset-GitMock; Add-GitResult 1 '[rejected] main (non-fast-forward); connection reset'; Add-GitResult 0
+        Assert-Fails { Invoke-HmGit -Arguments $fetchArgs -WorkingDirectory $testRoot } 'Git operation failed'
+        Assert-True ($script:GitCalls -eq 1)
+    }
+    Test-Case 'Git push is never repeated after a transport failure' {
+        Reset-GitMock; Add-GitResult 128 'fatal: Recv failure: Connection was reset'; Add-GitResult 0
+        Assert-Fails { Invoke-HmGit -Arguments @('push', '--atomic', $originalGitee, 'main') -WorkingDirectory $testRoot -Authenticate } 'Git operation failed'
+        Assert-True ($script:GitCalls -eq 1 -and $script:GitSleeps.Count -eq 0)
+    }
+    Test-Case 'non-temporary fetch and unknown remote are never retried' {
+        foreach ($argsToReject in @(
+            @('fetch', '--no-tags', $originalGitHub, 'refs/heads/main:refs/heads/main'),
+            @('ls-remote', '--refs', 'https://other.example/repo.git', 'refs/heads/main', 'refs/tags/*')
+        )) {
+            Reset-GitMock; Add-GitResult 128 'fatal: Could not resolve host: public.example'; Add-GitResult 0
+            Assert-Fails { Invoke-HmGit -Arguments $argsToReject -WorkingDirectory $testRoot } 'Git operation failed'
+            Assert-True ($script:GitCalls -eq 1)
+        }
+    }
+    Test-Case 'authenticated Git calls do not opt into anonymous read retries' {
+        Reset-GitMock; Add-GitResult 128 'fatal: Recv failure: Connection was reset'; Add-GitResult 0
+        Assert-Fails { Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot -Authenticate } 'Git operation failed'
+        Assert-True ($script:GitCalls -eq 1)
+    }
+    Test-Case 'Git retry logs do not expose diagnostics stdout addresses or credentials' {
+        Reset-GitMock
+        1..3 | ForEach-Object { Add-GitResult 128 'fatal: connection reset https://private.example/secret-not-real' 'stdout-secret-not-real' }
+        $captured = @(& { try { Invoke-HmGit -Arguments $readArgs -WorkingDirectory $testRoot | Out-Null } catch { } } 6>&1)
+        $log = $captured -join ' '
+        Assert-True ($script:GitCalls -eq 3 -and $log.Contains('git-read-refs') -and $log.Contains('exitcode=128'))
+        Assert-True (-not $log.Contains('https://') -and -not $log.Contains('secret-not-real') -and -not $log.Contains('connection reset'))
+    }
+    Test-Case 'partially fetched temporary refs are really cleaned after retry exhaustion' {
+        $script:PartialFetches = 0; $script:UnexpectedPushes = 0
+        Set-Item Function:Invoke-HmGitAttempt -Value {
+            param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate)
+            if ($Arguments[0] -eq 'ls-remote') {
+                $output = if ($Arguments[2] -eq $originalGitHub) { "$first`trefs/heads/main`n" } else { '' }
+                return [pscustomobject]@{ ExitCode = 0; Output = $output; TransientNetworkFailure = $false; TimedOut = $false }
+            }
+            if ($Arguments[0] -eq 'fetch') {
+                $script:PartialFetches++
+                $privateRef = $Arguments[3].Substring('refs/heads/main:'.Length)
+                $null = & $originalGitAttempt -Arguments @('update-ref', $privateRef, $first) -WorkingDirectory $WorkingDirectory
+                return [pscustomobject]@{ ExitCode = 128; Output = ''; TransientNetworkFailure = $true; TimedOut = $false }
+            }
+            if ($Arguments[0] -eq 'push') { $script:UnexpectedPushes++; throw 'Unexpected push.' }
+            return & $originalGitAttempt -Arguments $Arguments -WorkingDirectory $WorkingDirectory -Authenticate:$Authenticate
+        }
+        Assert-Fails { Sync-HmGitCode $working } 'Git operation failed'
+        Assert-True ($script:PartialFetches -eq 3 -and $script:UnexpectedPushes -eq 0)
+        Assert-True ([string]::IsNullOrWhiteSpace((Invoke-HmGit -Arguments @('for-each-ref', 'refs/hm-gitee-sync') -WorkingDirectory $working).Output))
+    }
+    $script:StopDrainFailure = $null
+    Test-Case 'failed pipe drain remains unconfirmed after the owned parent has exited' {
+        $info = [Diagnostics.ProcessStartInfo]::new('git')
+        $info.UseShellExecute = $false; $info.CreateNoWindow = $true
+        $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
+        $info.ArgumentList.Add('--version')
+        $null = $info.Environment.Remove('GITEE_TOKEN')
+        $owned = [Diagnostics.Process]::new(); $owned.StartInfo = $info
+        try {
+            $null = $owned.Start()
+            $stdout = $owned.StandardOutput.ReadToEndAsync(); $stderr = $owned.StandardError.ReadToEndAsync()
+            Assert-True ($owned.WaitForExit(10000))
+            $null = $stdout.GetAwaiter().GetResult(); $null = $stderr.GetAwaiter().GetResult()
+            $faultedPipe = [Threading.Tasks.Task]::FromException([InvalidOperationException]::new('simulated pipe failure'))
+            try { Stop-HmGitProcess $owned $faultedPipe ([Threading.Tasks.Task]::CompletedTask) }
+            catch { $script:StopDrainFailure = $_.Exception }
+            Assert-True ($owned.HasExited -and $null -ne $script:StopDrainFailure)
+            Assert-True ([bool]$script:StopDrainFailure.Data['HmGitTerminationUnconfirmed'])
+        } finally { $owned.Dispose() }
+    }
+    Test-Case 'unconfirmed pipe drain stops retries and avoids overlapping ref cleanup' {
+        $script:PartialFetches = 0; $script:CleanupCalls = 0; $script:RetainedPrivateRef = ''
+        Set-Item Function:Invoke-HmGitAttempt -Value {
+            param([string[]]$Arguments, [string]$WorkingDirectory, [switch]$Authenticate)
+            if ($Arguments[0] -eq 'ls-remote') {
+                $output = if ($Arguments[2] -eq $originalGitHub) { "$first`trefs/heads/main`n" } else { '' }
+                return [pscustomobject]@{ ExitCode = 0; Output = $output; TransientNetworkFailure = $false; TimedOut = $false }
+            }
+            if ($Arguments[0] -eq 'fetch') {
+                $script:PartialFetches++
+                $script:RetainedPrivateRef = $Arguments[3].Substring('refs/heads/main:'.Length)
+                $null = & $originalGitAttempt -Arguments @('update-ref', $script:RetainedPrivateRef, $first) -WorkingDirectory $WorkingDirectory
+                throw $script:StopDrainFailure
+            }
+            $script:CleanupCalls++
+            return & $originalGitAttempt -Arguments $Arguments -WorkingDirectory $WorkingDirectory -Authenticate:$Authenticate
+        }
+        try {
+            Assert-Fails { Sync-HmGitCode $working } 'Unable to confirm Git process shutdown'
+            Assert-True ($script:PartialFetches -eq 1 -and $script:CleanupCalls -eq 0)
+            $retained = & $originalGitAttempt -Arguments @('rev-parse', '--verify', $script:RetainedPrivateRef) -WorkingDirectory $working
+            Assert-True ($retained.ExitCode -eq 0)
+        } finally { $null = & $originalGitAttempt -Arguments @('update-ref', '-d', $script:RetainedPrivateRef) -WorkingDirectory $working }
+    }
+    Set-Item Function:Invoke-HmGitAttempt -Value $originalGitAttempt
+
     # Simulate only the HTTP boundary. Uploaded/downloaded bytes and real hashes remain real.
     function Reset-Server {
         $script:Server = @{ Release = $null; Attachments = [Collections.Generic.List[object]]::new(); Payloads = @{}; Posts = 0; CreatePosts = 0; UploadPosts = 0; LoseCreateResponse = $false; LoseUploadResponse = $false; RejectUploads = $false; SeenNotes = $null; ReleaseVisibilityDelay = 0; UploadVisibilityDelay = 0; HiddenReleaseGets = 0; HiddenAttachmentGets = 0; LatestUploadedId = 0 }
@@ -381,6 +556,7 @@ try {
     }
 } finally {
     Set-Item Function:Invoke-HmHttp -Value $originalHttp
+    Set-Item Function:Invoke-HmGitAttempt -Value $originalGitAttempt
     if ($originalSleep) { Set-Item Function:Start-Sleep -Value $originalSleep.ScriptBlock } else { Remove-Item Function:Start-Sleep -ErrorAction SilentlyContinue }
     $script:HmGitHub = $originalGitHub; $script:HmGitee = $originalGitee
     $env:GITEE_TOKEN = $originalToken
