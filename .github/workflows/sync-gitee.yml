@@ -35,7 +35,7 @@ jobs:
         github.event.workflow_run.head_repository.full_name == github.repository &&
         startsWith(github.event.workflow_run.head_branch, 'v')))
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     defaults:
       run:
         shell: pwsh
