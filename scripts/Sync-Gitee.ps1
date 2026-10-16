@@ -36,6 +36,48 @@ function Get-HmHttpTimeoutSeconds([bool]$HasUpload, [bool]$HasDownload) {
     return 60
 }
 
+function Set-HmGiteeAuthentication([System.Net.Http.HttpRequestMessage]$Request, [string]$AccessToken) {
+    $uri = $Request.RequestUri
+    if ($Request.Method.Method -ne 'POST' -or $uri.Scheme -ne 'https' -or
+        $uri.Host -ne 'gitee.com' -or -not $uri.IsDefaultPort -or $uri.UserInfo -or $uri.Fragment -or
+        $uri.Query -or -not $uri.AbsoluteUri.StartsWith($script:HmGiteeApi + '/', [StringComparison]::Ordinal)) {
+        throw 'Credentials may only be sent to the fixed Gitee repository by POST.'
+    }
+    if ([string]::IsNullOrWhiteSpace($AccessToken)) { throw 'GITEE_TOKEN is required.' }
+    # Gitee's official OAuth SDK authenticates multipart uploads with a Bearer header.
+    $Request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $AccessToken)
+}
+
+function New-HmGiteeMultipart {
+    param(
+        [Parameter(Mandatory)][IO.Stream]$FileStream,
+        [Parameter(Mandatory)][ValidateSet('HM-AppKit-win-x64.zip', 'HM-AppKit-win-x64.zip.sha256')][string]$FileName,
+        [string]$AccessToken
+    )
+    $form = [System.Net.Http.MultipartFormDataContent]::new()
+    try {
+        if ($AccessToken) {
+            $tokenPart = [System.Net.Http.StringContent]::new($AccessToken)
+            $tokenPart.Headers.ContentDisposition = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new('form-data')
+            $tokenPart.Headers.ContentDisposition.Name = '"access_token"'
+            $tokenPart.Headers.ContentType = $null
+            $form.Add($tokenPart)
+        }
+        $filePart = [System.Net.Http.StreamContent]::new($FileStream)
+        $filePart.Headers.ContentDisposition = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new('form-data')
+        $filePart.Headers.ContentDisposition.Name = '"file"'
+        $filePart.Headers.ContentDisposition.FileName = '"' + $FileName + '"'
+        $filePart.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new('application/octet-stream')
+        # Explicit disposition matches browser/curl form data and omits filename* (RFC 7578).
+        $form.Add($filePart)
+        # MultipartFormDataContent is IEnumerable; return the container, not its parts.
+        return ,$form
+    } catch {
+        $form.Dispose()
+        throw
+    }
+}
+
 # Only public GETs are retried here. POSTs have their own read-after-write recovery.
 # Token-bearing contents and exception details never leave this function.
 function Invoke-HmHttp {
@@ -84,13 +126,12 @@ function Invoke-HmHttp {
                 $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::new($Method), $current)
                 $request.Headers.UserAgent.ParseAdd('HM-AppKit-Gitee-Sync/1.0')
                 $request.Headers.Accept.ParseAdd('application/json')
+                if ($Authenticated) { Set-HmGiteeAuthentication $request $env:GITEE_TOKEN }
                 if ($Method -eq 'POST') {
                     if ($UploadPath) {
-                        $form = [System.Net.Http.MultipartFormDataContent]::new()
-                        if ($Authenticated) { $form.Add([System.Net.Http.StringContent]::new($env:GITEE_TOKEN), 'access_token') }
                         $stream = [IO.File]::OpenRead($UploadPath)
-                        $form.Add([System.Net.Http.StreamContent]::new($stream), 'file', [IO.Path]::GetFileName($UploadPath))
-                        $request.Content = $form
+                        $token = if ($Authenticated) { $env:GITEE_TOKEN } else { $null }
+                        $request.Content = New-HmGiteeMultipart -FileStream $stream -FileName ([IO.Path]::GetFileName($UploadPath)) -AccessToken $token
                     } else {
                         $data = @{}
                         if ($Body) { foreach ($key in $Body.Keys) { $data[$key] = $Body[$key] } }

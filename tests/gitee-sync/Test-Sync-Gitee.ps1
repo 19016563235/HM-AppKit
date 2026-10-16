@@ -50,6 +50,80 @@ try {
     Test-Case 'file uploads retain a 15-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $false) -eq 900) }
     Test-Case 'file downloads retain a 15-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $false -HasDownload $true) -eq 900) }
     Test-Case 'file transfer deadline is independent of upload/download precedence' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $true) -eq 900) }
+    Test-Case 'official Bearer authentication attaches only to fixed-repository POSTs' {
+        foreach ($path in @('/releases', '/releases/73/attach_files')) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, ($script:HmGiteeApi + $path))
+            try {
+                Set-HmGiteeAuthentication $request 'fake-token-for-offline-tests'
+                Assert-True ($request.Headers.Authorization.Scheme -ceq 'Bearer')
+                Assert-True ($request.Headers.Authorization.Parameter -ceq 'fake-token-for-offline-tests')
+                Assert-True (-not $request.RequestUri.Query)
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'Bearer destination guard rejects foreign, insecure, redirected, and query addresses' {
+        foreach ($uri in @('https://evil.example/releases', 'https://gitee.com/api/v5/repos/other/repo/releases',
+            'http://gitee.com/api/v5/repos/huanmeng-it/HM-AppKit/releases', 'https://gitee.com:8443/api/v5/repos/huanmeng-it/HM-AppKit/releases',
+            'https://user@gitee.com/api/v5/repos/huanmeng-it/HM-AppKit/releases', ($script:HmGiteeApi + '/releases?access_token=not-real'),
+            ($script:HmGiteeApi + '/releases#fragment'))) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, $uri)
+            try {
+                Assert-Fails { Set-HmGiteeAuthentication $request 'fake-token-for-offline-tests' } 'Credentials may only'
+                Assert-True ($null -eq $request.Headers.Authorization)
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'Bearer is never attached to anonymous verification GETs' {
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, ($script:HmGiteeApi + '/releases/73/attach_files/100/download'))
+        try {
+            Assert-Fails { Set-HmGiteeAuthentication $request 'fake-token-for-offline-tests' } 'Credentials may only'
+            Assert-True ($null -eq $request.Headers.Authorization)
+        } finally { $request.Dispose() }
+    }
+    Test-Case 'empty Bearer token fails without attaching an authorization header' {
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, ($script:HmGiteeApi + '/releases'))
+        try {
+            Assert-Fails { Set-HmGiteeAuthentication $request '' } 'GITEE_TOKEN'
+            Assert-True ($null -eq $request.Headers.Authorization)
+        } finally { $request.Dispose() }
+    }
+    foreach ($fileName in @($script:HmPackageName, ($script:HmPackageName + '.sha256'))) {
+        Test-Case ("real multipart wire format for $fileName") {
+            $payload = [Text.Encoding]::UTF8.GetBytes('original-test-file-bytes')
+            $stream = [IO.MemoryStream]::new($payload, $false)
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, ($script:HmGiteeApi + '/releases/73/attach_files'))
+            try {
+                Set-HmGiteeAuthentication $request 'fake-token-for-offline-tests'
+                $form = New-HmGiteeMultipart -FileStream $stream -FileName $fileName -AccessToken 'fake-token-for-offline-tests'
+                Assert-True ($form -is [Net.Http.MultipartFormDataContent]) 'Multipart container was enumerated into parts.'
+                $request.Content = $form
+                $wire = $request.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                Assert-True ($wire.Contains('Content-Disposition: form-data; name="access_token"'))
+                Assert-True ($wire.Contains('Content-Disposition: form-data; name="file"; filename="' + $fileName + '"'))
+                Assert-True (-not $wire.Contains('filename*='))
+                Assert-True ($wire.Contains('Content-Type: application/octet-stream'))
+                Assert-True ($wire.Contains('original-test-file-bytes'))
+                Assert-True ([regex]::Matches($wire, 'fake-token-for-offline-tests').Count -eq 1)
+                Assert-True ($request.Content.Headers.ContentLength -eq [Text.Encoding]::UTF8.GetByteCount($wire))
+                Assert-True ($request.Headers.Authorization.Parameter -ceq 'fake-token-for-offline-tests')
+            } finally { $request.Dispose(); $stream.Dispose() }
+        }
+    }
+    Test-Case 'multipart accepts only the two fixed ASCII release filenames' {
+        $stream = [IO.MemoryStream]::new([byte[]](65))
+        try { Assert-Fails { New-HmGiteeMultipart -FileStream $stream -FileName 'unsafe"name.zip' -AccessToken 'fake-token-for-offline-tests' } 'ValidateSet|does not belong|Cannot validate' }
+        finally { $stream.Dispose() }
+    }
+    Test-Case 'unauthenticated multipart contains only the file part and owns its stream' {
+        $stream = [IO.MemoryStream]::new([byte[]](65, 66, 67))
+        $form = New-HmGiteeMultipart -FileStream $stream -FileName $script:HmPackageName
+        try {
+            $wire = $form.ReadAsStringAsync().GetAwaiter().GetResult()
+            Assert-True (-not $wire.Contains('access_token'))
+            Assert-True ($wire.Contains('ABC'))
+        } finally { $form.Dispose() }
+        Assert-True (-not $stream.CanRead)
+    }
     Test-Case 'stable version tags accepted' { Assert-True (Test-HmReleaseTag 'v0.15'); Assert-True (Test-HmReleaseTag 'v1.2.3.4') }
     Test-Case 'path, branch, and prerelease tags rejected' { foreach ($v in @('main', '../main', 'v0.15-beta', 'v1', 'v0.15/other')) { Assert-True (-not (Test-HmReleaseTag $v)) } }
     Test-Case 'HTTPS CDN redirects restricted by publisher' {
