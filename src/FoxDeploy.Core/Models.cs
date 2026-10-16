@@ -27,8 +27,9 @@ public sealed class DeploymentSettings
     public bool Silent { get; set; } = true;
     public bool KeepInstallers { get; set; } = true;
     public bool RequireCustomLocation { get; set; } = true;
-    public InstallationSourceMode SourceMode { get; set; } = InstallationSourceMode.Online;
-    public string LocalInstallerDirectory { get; set; } = @"F:\客服软件";
+    public InstallationSourceMode SourceMode { get; set; } = InstallationSourceMode.Auto;
+    // Retained for deserializing old settings only; automatic sources always use InstallerDirectory.
+    public string LocalInstallerDirectory { get; set; } = InstallerSources.InstallerDirectory;
 }
 
 public sealed record InstallRequest(AppDefinition App, string? TargetDirectory = null);

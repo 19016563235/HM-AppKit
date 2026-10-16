@@ -34,7 +34,6 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
 {
     private const long MaximumInstallerBytes = 2L * 1024 * 1024 * 1024;
     private static readonly HttpClient SharedClient = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(15) };
-    private readonly string _cacheRoot;
     private readonly InstallerCacheStore _library;
     private readonly HttpClient _client;
     private readonly bool _ownsClient;
@@ -46,8 +45,8 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         Func<string, IReadOnlyList<string>, string>? signatureVerifier = null,
         Func<OnlineInstallerDefinition, CancellationToken, Task<WingetResolvedInstaller>>? manifestResolver = null)
     {
-        _cacheRoot = Path.GetFullPath(cacheRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HM AppKit", "Cache"));
-        _library = new InstallerCacheStore(installerLibraryRoot ?? Path.Combine(AppContext.BaseDirectory, "Local Installer"));
+        // cacheRoot remains a constructor compatibility parameter. Installer bytes are always retained beside the app.
+        _library = new InstallerCacheStore(installerLibraryRoot ?? InstallerSources.InstallerDirectory);
         _client = httpMessageHandler is null ? SharedClient : new HttpClient(httpMessageHandler, disposeHandler: false) { Timeout = TimeSpan.FromMinutes(15) };
         _ownsClient = httpMessageHandler is not null;
         _verifyPublisher = signatureVerifier ?? AuthenticodeVerification.VerifyPublisher;
@@ -57,8 +56,7 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
     public async Task CheckForUpdatesAsync(IEnumerable<AppDefinition> apps, DeploymentSettings settings, IProgress<string> progress, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(apps); ArgumentNullException.ThrowIfNull(settings); ArgumentNullException.ThrowIfNull(progress);
-        if (!settings.KeepInstallers) return;
-        var onlineSettings = new DeploymentSettings { SourceMode = InstallationSourceMode.Online, KeepInstallers = true };
+        var onlineSettings = new DeploymentSettings();
         foreach (var app in apps.Where(app => app.OnlineInstaller is not null))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -80,9 +78,7 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         phaseTimeout.CancelAfter(TimeSpan.FromMinutes(15));
         try
         {
-            if (settings.SourceMode == InstallationSourceMode.Online && settings.KeepInstallers)
-                return await PreparePersistentAsync(app, log, phaseTimeout.Token).ConfigureAwait(false);
-            return await PrepareTemporaryAsync(app, settings, log, phaseTimeout.Token).ConfigureAwait(false);
+            return await PreparePersistentAsync(app, log, phaseTimeout.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (phaseTimeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         { throw new IOException("安装包获取或等待缓存超过 15 分钟，已停止，请检查网络后重试。", ex); }
@@ -90,39 +86,60 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
 
     private async Task<PreparedInstaller> PreparePersistentAsync(AppDefinition app, IProgress<string> log, CancellationToken cancellationToken)
     {
-        var online = app.OnlineInstaller ?? throw new NotSupportedException($"{app.Name} 未配置在线安装来源。");
-        if (online.AllowedPublishers.Count == 0) throw new InvalidDataException("在线安装源缺少允许的发布者，已拒绝执行。");
+        var online = app.OnlineInstaller;
+        var profile = (InstallerProfile?)online ?? app.LocalInstaller ?? throw new NotSupportedException($"{app.Name} 未配置可核验的安装来源。");
+        if (online is not null && online.AllowedPublishers.Count == 0) throw new InvalidDataException("在线安装源缺少允许的发布者，已拒绝执行。");
         InstallerCacheStore.Lease lease;
         try { lease = await _library.AcquireAsync(app.Id, cancellationToken).ConfigureAwait(false); }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-        { throw new IOException($"无法使用安装器旁的保留目录 {_library.Root}。请检查写入权限，或关闭“保留安装包”后使用临时下载。{ex.Message}", ex); }
+        { throw new IOException($"无法使用程序旁的安装包目录 {_library.Root}。请将 HM AppKit 放在可写入的文件夹或 U 盘中后重试。{ex.Message}", ex); }
         try
         {
             InstallerCacheEntry? oldEntry = null;
             try { oldEntry = _library.ReadEntry(lease); }
             catch (Exception ex) when (ex is InvalidDataException or JsonException)
             { log.Report($"[{app.Name}] 保留包索引无效，将重新下载；未删除原文件：{ex.Message}"); }
-            var fingerprint = SourceFingerprint(online);
+            var fingerprint = online is not null ? SourceFingerprint(online) : LocalFingerprint(app.LocalInstaller!);
             InstallerCacheEntry? usable = null;
             if (oldEntry is not null && (oldEntry.SourceProfileFingerprint == fingerprint ||
                 string.IsNullOrEmpty(oldEntry.SourceProfileFingerprint) && oldEntry.SourceFingerprint == fingerprint))
             {
                 try
                 {
-                    await using var verification = await OpenVerifiedCachedAsync(lease, oldEntry, online, cancellationToken).ConfigureAwait(false);
+                    await using var verification = await OpenVerifiedCachedAsync(lease, oldEntry, profile, cancellationToken).ConfigureAwait(false);
                     usable = oldEntry;
                 }
                 catch (Exception ex) when (IsPreparationError(ex)) { log.Report($"[{app.Name}] 已保留安装包校验失败，不会复用：{ex.Message}"); }
             }
+            if (usable is null && app.LocalInstaller is not null)
+            {
+                try
+                {
+                    usable = await ImportLooseInstallerAsync(app, profile, lease, fingerprint, log, cancellationToken).ConfigureAwait(false);
+                    if (usable is not null && oldEntry is not null && usable.PayloadRelativePath != oldEntry.PayloadRelativePath)
+                        await _library.DeleteRetiredAsync(lease, oldEntry, log).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (online is not null && !cancellationToken.IsCancellationRequested && IsPreparationError(ex))
+                { log.Report($"[{app.Name}] 程序旁的安装包未通过已核实版本校验，将从官网获取；原文件保留：{ex.Message}"); }
+            }
             InstallerCacheEntry current;
             var latestConfirmed = true;
-            try { current = await RefreshAsync(app, online, lease, fingerprint, usable, oldEntry, log, cancellationToken).ConfigureAwait(false); }
+            try
+            {
+                if (online is null)
+                {
+                    current = usable ?? throw new FileNotFoundException($"请将已核实的 {app.LocalInstaller!.FileName} 放入程序旁 Local Installer；此应用未配置官网来源。");
+                    latestConfirmed = false;
+                    log.Report($"[{app.Name}] 仅配置本地安装包，已核验后使用；无法检查官网更新。");
+                }
+                else current = await RefreshAsync(app, online, lease, fingerprint, usable, usable ?? oldEntry, log, cancellationToken).ConfigureAwait(false);
+            }
             catch (Exception ex) when (usable is not null && !cancellationToken.IsCancellationRequested && IsPreparationError(ex))
             {
                 current = usable; latestConfirmed = false;
                 log.Report($"[{app.Name}] 未能确认官网最新版本：{ex.Message}；将使用重新校验通过的已保留安装包。");
             }
-            var fileLock = await OpenVerifiedCachedAsync(lease, current, online, cancellationToken).ConfigureAwait(false);
+            var fileLock = await OpenVerifiedCachedAsync(lease, current, profile, cancellationToken).ConfigureAwait(false);
             var path = _library.PayloadPath(lease, current);
             log.Report($"[{app.Name}] 使用保留安装包：{current.OriginalFileName}" + (current.Version is { Length: > 0 } ? $"（{current.Version}）" : ""));
             return new PreparedInstaller(path, fileLock, () => { lease.Dispose(); return ValueTask.CompletedTask; })
@@ -204,49 +221,52 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         finally { if (Directory.Exists(pending)) DeleteOwnedPayload(Path.Combine(pending, Path.GetFileName(path)), pending, log); }
     }
 
-    private async Task<PreparedInstaller> PrepareTemporaryAsync(AppDefinition app, DeploymentSettings settings, IProgress<string> log, CancellationToken cancellationToken)
+    private async Task<InstallerCacheEntry?> ImportLooseInstallerAsync(AppDefinition app, InstallerProfile effectiveProfile,
+        InstallerCacheStore.Lease lease, string fingerprint, IProgress<string> log, CancellationToken cancellationToken)
     {
-        var profile = InstallerSources.GetProfile(app, settings) ?? throw new NotSupportedException($"{app.Name} 未配置此安装来源。");
-        var folder = Path.Combine(_cacheRoot, Guid.NewGuid().ToString("N"));
-        InstallerCacheStore.EnsureDirectory(folder);
-        var path = Path.Combine(folder, app.Id + (profile.InstallerType.Equals("msi", StringComparison.OrdinalIgnoreCase) ? ".msi" : ".exe"));
-        FileStream? payloadLock = null;
+        var local = app.LocalInstaller!;
+        if (string.IsNullOrWhiteSpace(local.Sha256) || local.Sha256.Length != 64 || !local.Sha256.All(Uri.IsHexDigit)) throw new InvalidDataException("本地安装包缺少已核实的 SHA-256，已拒绝导入。");
+        var source = InstallerSources.ResolveLocalPath(app, new DeploymentSettings(), _library.Root);
+        InstallerCacheStore.CheckNoReparsePoints(source);
+        if (!File.Exists(source)) return null;
+        if (app.OnlineInstaller is not null && ExecutionFingerprint(local) != ExecutionFingerprint(effectiveProfile))
+            throw new InvalidDataException("此旧版本地包的安装参数与当前官网版本不同，不能按当前参数执行。");
+        log.Report($"[{app.Name}] 正在核验程序旁 Local Installer 中的 {local.FileName}…");
+        var pending = _library.CreatePendingDirectory(lease);
+        var path = Path.Combine(pending, local.FileName);
+        string? promoted = null;
+        var committed = false;
         try
         {
-            string? expected; string? version = null;
-            if (settings.SourceMode == InstallationSourceMode.Local)
+            await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                var source = InstallerSources.ResolveLocalPath(app, settings);
-                path = Path.Combine(folder, app.LocalInstaller!.FileName);
-                expected = app.LocalInstaller.Sha256;
-                log.Report($"[{app.Name}] 正在校验本地安装包 {Path.GetFileName(source)}");
-                await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan);
-                if (input.Length > MaximumInstallerBytes) throw new InvalidDataException("安装包超过支持的大小。");
+                if (input.Length <= 0 || input.Length > MaximumInstallerBytes) throw new InvalidDataException("安装包为空或超过支持的大小。");
                 await using var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan);
                 await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+                await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+                output.Flush(flushToDisk: true);
             }
-            else
+            var evidence = await VerifyFileAsync(path, effectiveProfile, local.Sha256, cancellationToken, app.OnlineInstaller is null).ConfigureAwait(false);
+            // The source is user-owned. Copy it into an owned package; never move or remove it.
+            promoted = _library.Promote(lease, pending);
+            path = Path.Combine(promoted, local.FileName);
+            var entry = new InstallerCacheEntry
             {
-                var online = app.OnlineInstaller ?? throw new NotSupportedException("在线安装源不可用。");
-                log.Report($"[{app.Name}] 本次使用临时下载，不删除历史保留包。");
-                var source = await ResolveSourceAsync(online, null, cancellationToken).ConfigureAwait(false);
-                expected = source.ExpectedSha256; version = source.Version;
-                using var fetched = await GetAllowedAsync(source.DownloadUri, online.AllowedDownloadHosts, cancellationToken).ConfigureAwait(false);
-                fetched.Response.EnsureSuccessStatusCode();
-                path = Path.Combine(folder, DownloadName(app, online, fetched.FinalUri));
-                await DownloadAsync(fetched.Response, path, app.Name, log, cancellationToken).ConfigureAwait(false);
-            }
-            var evidence = await VerifyFileAsync(path, profile, expected, cancellationToken, settings.SourceMode == InstallationSourceMode.Local).ConfigureAwait(false);
-            if (settings.SourceMode == InstallationSourceMode.Local) log.Report($"[{app.Name}] 本地安装包 SHA-256 核验通过。");
-            if (!string.IsNullOrWhiteSpace(evidence.Publisher)) log.Report($"[{app.Name}] 数字签名已核对：{evidence.Publisher}");
-            payloadLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return new PreparedInstaller(path, payloadLock, () => { DeleteOwnedPayload(path, folder, log); return ValueTask.CompletedTask; })
-            { Version = version ?? evidence.Version, Sha256 = evidence.Sha256, Publisher = evidence.Publisher };
+                AppId = app.Id, OwnerId = lease.OwnerId, SourceProfileFingerprint = fingerprint, SourceFingerprint = fingerprint,
+                PayloadRelativePath = Path.GetFileName(promoted) + "\\" + local.FileName, OriginalFileName = local.FileName,
+                ExpectedSha256 = local.Sha256, Bytes = evidence.Bytes, Sha256 = evidence.Sha256, Publisher = evidence.Publisher,
+                Version = evidence.Version, DownloadedAt = DateTimeOffset.Now, CheckedAt = DateTimeOffset.Now
+            };
+            _library.WriteEntry(lease, entry);
+            committed = true;
+            log.Report($"[{app.Name}] 本地包核验通过，已导入受管缓存；原文件保留。");
+            return entry;
         }
-        catch { payloadLock?.Dispose(); DeleteOwnedPayload(path, folder, log); throw; }
+        catch { if (promoted is not null && !committed) DeleteOwnedPayload(path, promoted, log); throw; }
+        finally { if (Directory.Exists(pending)) DeleteOwnedPayload(Path.Combine(pending, local.FileName), pending, log); }
     }
 
-    private async Task<FileStream> OpenVerifiedCachedAsync(InstallerCacheStore.Lease lease, InstallerCacheEntry entry, OnlineInstallerDefinition profile, CancellationToken cancellationToken)
+    private async Task<FileStream> OpenVerifiedCachedAsync(InstallerCacheStore.Lease lease, InstallerCacheEntry entry, InstallerProfile profile, CancellationToken cancellationToken)
     {
         var path = _library.PayloadPath(lease, entry);
         var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.Asynchronous | FileOptions.SequentialScan);
@@ -256,7 +276,10 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
             var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
             if (!hash.Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase) || entry.ExpectedSha256 is { Length: > 0 } expected && !hash.Equals(expected, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("保留安装包的 SHA-256 校验失败。");
-            _ = _verifyPublisher(path, profile.AllowedPublishers);
+            if (profile is LocalInstallerDefinition local && !hash.Equals(local.Sha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("本地受管安装包与当前已核实版本不一致。");
+            if (profile.AllowedPublishers.Count > 0) _ = _verifyPublisher(path, profile.AllowedPublishers);
+            else if (profile is not LocalInstallerDefinition) throw new InvalidDataException("受管安装包缺少可信签名发布者。");
             stream.Position = 0; return stream;
         }
         catch { stream.Dispose(); throw; }
@@ -345,7 +368,7 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         var normalized = WebUtility.HtmlDecode(metadata).Replace("\\/", "/", StringComparison.Ordinal).Replace("\\u002F", "/", StringComparison.OrdinalIgnoreCase);
         for (var layer = 0; layer < 3; layer++) normalized = normalized.Replace("\\\"", "\"", StringComparison.Ordinal);
         var match = Regex.Match(normalized, definition.UrlPattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
-        if (!match.Success || !match.Groups["url"].Success) throw new InvalidDataException("官网版本信息已变化，无法确认当前下载地址，请改用本地安装包。");
+        if (!match.Success || !match.Groups["url"].Success) throw new InvalidDataException("官网版本信息已变化，无法确认当前下载地址；没有已核验缓存时将停止安装。");
         var value = match.Groups["url"].Value.Trim().Replace("\\u0026", "&", StringComparison.OrdinalIgnoreCase);
         var absolute = Uri.TryCreate(value, UriKind.Absolute, out var candidate) ? candidate : new Uri(baseUri ?? new Uri(definition.MetadataUrl), value);
         return ValidateAllowedUri(absolute.AbsoluteUri, definition.AllowedDownloadHosts);
@@ -409,6 +432,13 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         Hosts = profile.AllowedDownloadHosts.Order(StringComparer.OrdinalIgnoreCase), Publishers = profile.AllowedPublishers.Order(StringComparer.OrdinalIgnoreCase),
         Headers = profile.RequestHeaders.OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
     }))));
+    private static string LocalFingerprint(LocalInstallerDefinition profile) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(profile))));
+    private static string ExecutionFingerprint(InstallerProfile profile) => JsonSerializer.Serialize(new
+    {
+        Type = profile.InstallerType.ToLowerInvariant(), profile.SilentSupported, profile.LocationSupported,
+        profile.RequiresExistingTargetDirectory, profile.InteractiveFallback, profile.Adapter,
+        profile.SilentArguments, profile.InteractiveArguments, profile.InstallLocationArgument
+    });
     private static bool IsPreparationError(Exception ex) => ex is IOException or InvalidDataException or UnauthorizedAccessException or HttpRequestException or OperationCanceledException or
         InvalidOperationException or CryptographicException or RegexMatchTimeoutException or JsonException;
     private static void DeleteOwnedPayload(string path, string directory, IProgress<string> log)

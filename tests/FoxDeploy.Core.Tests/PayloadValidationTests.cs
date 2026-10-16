@@ -43,7 +43,7 @@ internal static class PayloadValidationTests
             finally { File.Delete(path); }
             return Task.CompletedTask;
         });
-        await test("Local payload stages exact verified bytes separately and deletes owned cache", async () =>
+        await test("Local-only automatic payload retains verified copy beside the program and preserves original", async () =>
         {
             var root = Path.Combine(Path.GetTempPath(), "HM-Payload-" + Guid.NewGuid().ToString("N"));
             var source = Path.Combine(root, "source");
@@ -55,15 +55,16 @@ internal static class PayloadValidationTests
             var app = new AppDefinition { Id = "fixture", Name = "Fixture", FolderName = "Fixture", LocalInstaller = new LocalInstallerDefinition { FileName = "fixture.exe", Sha256 = Convert.ToHexString(SHA256.HashData(bytes)) } };
             var options = new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = source };
             string staged;
-            await using (var payload = await new InstallerPayloadProvider(cache).PrepareAsync(app, options, new QuietProgress(), default))
+            using var provider = new InstallerPayloadProvider(cache, source);
+            await using (var payload = await provider.PrepareAsync(app, options, new QuietProgress(), default))
             {
                 staged = payload.FilePath;
                 if (staged == file || !File.Exists(staged)) throw new Exception("Payload must be staged separately.");
                 var stagedBytes = await File.ReadAllBytesAsync(staged);
                 if (!bytes.SequenceEqual(stagedBytes)) throw new Exception("Staged bytes differ.");
             }
-            if (File.Exists(staged) || !File.Exists(file)) throw new Exception("Cleanup must remove cache but preserve source.");
-            File.Delete(file); Directory.Delete(source); Directory.Delete(cache); Directory.Delete(root);
+            if (!File.Exists(staged) || !File.Exists(file) || Directory.Exists(cache)) throw new Exception("Automatic cache must persist while original remains user-owned.");
+            Directory.Delete(root, recursive: true);
         });
         await test("Modified local package hash fails before execution and cache is cleaned", async () =>
         {
@@ -74,10 +75,12 @@ internal static class PayloadValidationTests
             var cache = Path.Combine(root, "cache");
             var app = new AppDefinition { Id = "fixture", Name = "Fixture", FolderName = "Fixture", LocalInstaller = new LocalInstallerDefinition { FileName = "fixture.exe", Sha256 = new string('0', 64) } };
             var thrown = false;
-            try { await using var payload = await new InstallerPayloadProvider(cache).PrepareAsync(app, new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = root }, new QuietProgress(), default); }
+            using var provider = new InstallerPayloadProvider(cache, root);
+            try { await using var payload = await provider.PrepareAsync(app, new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = @"F:\Retired Source" }, new QuietProgress(), default); }
             catch (InvalidDataException) { thrown = true; }
-            if (!thrown || Directory.EnumerateFileSystemEntries(cache).Any()) throw new Exception("Changed package must fail and clean its cache.");
-            File.Delete(source); Directory.Delete(cache); Directory.Delete(root);
+            if (!thrown || Directory.Exists(cache) || Directory.EnumerateDirectories(Path.Combine(root, "fixture"), ".pending-*").Any() ||
+                Directory.EnumerateDirectories(Path.Combine(root, "fixture"), "package-*").Any()) throw new Exception("Changed package must fail and clean its pending cache.");
+            Directory.Delete(root, recursive: true);
         });
     }
 

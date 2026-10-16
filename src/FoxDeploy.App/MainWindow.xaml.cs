@@ -40,8 +40,6 @@ public partial class MainWindow : Window
     private string? _explicitSelectedDrive;
     private string? _selectedDrive;
     private string _baseFolder = "Software";
-    private InstallationSourceMode _sourceMode = InstallationSourceMode.Online;
-    private string _localInstallerDirectory = @"F:\客服软件";
     private bool _smokeTest;
 
     public MainWindow() : this(smokeTest: false) { }
@@ -57,11 +55,12 @@ public partial class MainWindow : Window
         _view.Filter = FilterRow;
         AppItems.ItemsSource = _view;
         LoadState();
+        _settings = ReadSettings();
         LoadCatalog();
         _loading = false;
         RefreshDrives();
         UpdateRoles();
-        UpdateSourceControls();
+        UpdateInstallServiceStatus();
         UpdateSummary();
         InitializeSelfUpdater();
         InstallButton.ToolTip = "点击后将接受所选应用的软件许可及 WinGet 源协议，并按计划执行安装。静默安装仍可能显示 Windows 管理员授权提示。";
@@ -76,9 +75,10 @@ public partial class MainWindow : Window
         Loaded += async (_, _) =>
         {
             if (_smokeTest) return;
-            await Task.WhenAll(CheckWingetAsync(), CheckCachedInstallersAsync(), CheckSelfUpdateAsync(manual: false));
+            await Task.WhenAll(CheckWingetAsync(), CheckSelfUpdateAsync(manual: false));
         };
-        AppendLog("已就绪。安装前可预览每个应用的目标路径与支持情况。");
+        AppendLog("已就绪。安装时自动检查官方更新并校验缓存；安装包保存在程序旁 Local Installer 文件夹。");
+        RunStatus.ToolTip = Path.Combine(AppContext.BaseDirectory, "Local Installer");
     }
 
     private async Task CheckWingetAsync()
@@ -89,31 +89,17 @@ public partial class MainWindow : Window
             if (!_engine.IsWingetAvailable || !System.Text.RegularExpressions.Regex.IsMatch(version.Trim(), "^v?[0-9]+\\.[0-9]+"))
                 throw new InvalidOperationException(version);
             _wingetReady = true;
-            WingetStatus.ToolTip = $"WinGet {version.Trim()} 已就绪。";
+            WingetStatus.ToolTip = $"WinGet {version.Trim()} 已就绪。安装时检查官方更新；安装包自动缓存到程序旁 Local Installer。";
         }
         catch (Exception ex)
         {
             _wingetReady = false;
-            WingetStatus.ToolTip = "部分在线应用需要 Microsoft“应用安装程序”（WinGet）；官方直连和本地安装仍可使用。";
+            WingetStatus.ToolTip = "自定义 WinGet 应用需要 Microsoft“应用安装程序”；官方直连及已校验缓存仍可使用。";
             AppendLog($"WinGet 检测：{ex.Message}");
             RunHint.Text = "需要 Windows 应用安装程序（WinGet）。可从 Microsoft Store 安装或更新。";
         }
         _sourceCheckCompleted = true;
-        UpdateSourceControls();
-    }
-
-    private async Task CheckCachedInstallersAsync()
-    {
-        try
-        {
-            await _payloadProvider.CheckForUpdatesAsync(_rows.Select(row => row.App).ToArray(), ReadSettings(),
-                new Progress<string>(AppendLog), _startupUpdateCancellation.Token);
-        }
-        catch (OperationCanceledException) when (_startupUpdateCancellation.IsCancellationRequested) { }
-        catch (Exception ex)
-        {
-            AppendLog($"已缓存安装包的更新检查未完成：{ex.Message}");
-        }
+        UpdateInstallServiceStatus();
     }
 
     private void LoadState()
@@ -132,18 +118,16 @@ public partial class MainWindow : Window
                 var state = JsonSerializer.Deserialize<SavedState>(File.ReadAllText(path), JsonOptions);
                 if (state is null) continue;
                 _settings = state.Settings ?? new DeploymentSettings();
+                InstallerSources.NormalizeSettings(_settings);
                 if (state.SchemaVersion < 2 && string.Equals(_settings.BaseFolder, "CompanyApps", StringComparison.OrdinalIgnoreCase))
                     _settings.BaseFolder = "Software";
                 _settings.DrivePriority = new DeploymentSettings().DrivePriority;
                 _baseFolder = _settings.BaseFolder;
                 _explicitSelectedDrive = _settings.SelectedDrive;
-                _sourceMode = _settings.SourceMode;
-                _localInstallerDirectory = _settings.LocalInstallerDirectory;
                 _customApps.AddRange(state.CustomApps ?? []);
                 _savedPaths = state.AppPaths ?? [];
                 SkipInstalledCheck.IsChecked = _settings.SkipInstalled;
                 SilentCheck.IsChecked = _settings.Silent;
-                KeepInstallersCheck.IsChecked = _settings.KeepInstallers;
                 if (!string.Equals(Path.GetDirectoryName(path), _stateDirectory, StringComparison.OrdinalIgnoreCase))
                     AppendLog("已读取旧版配置；后续配置将保存到 HM AppKit，旧文件保留。");
                 return;
@@ -215,17 +199,19 @@ public partial class MainWindow : Window
 
     private DeploymentSettings ReadSettings()
     {
-        return new DeploymentSettings
+        var settings = new DeploymentSettings
         {
             SelectedDrive = _explicitSelectedDrive,
             BaseFolder = _baseFolder,
             SkipInstalled = SkipInstalledCheck.IsChecked == true,
             Silent = SilentCheck.IsChecked == true,
-            KeepInstallers = KeepInstallersCheck.IsChecked == true,
+            KeepInstallers = true,
             RequireCustomLocation = true,
-            SourceMode = _sourceMode,
-            LocalInstallerDirectory = _localInstallerDirectory
+            SourceMode = InstallationSourceMode.Auto,
+            LocalInstallerDirectory = Path.Combine(AppContext.BaseDirectory, "Local Installer")
         };
+        InstallerSources.NormalizeSettings(settings);
+        return settings;
     }
 
     private void Settings_Changed(object sender, RoutedEventArgs e)
@@ -236,54 +222,12 @@ public partial class MainWindow : Window
         SaveState();
     }
 
-    private void SourceMode_Click(object sender, RoutedEventArgs e)
+    private void UpdateInstallServiceStatus()
     {
-        if (_isRunning || sender is not Button { Tag: string mode } ||
-            !Enum.TryParse<InstallationSourceMode>(mode, out var sourceMode)) return;
-        _sourceMode = sourceMode;
-        _settings = ReadSettings();
-        UpdatePathHints();
-        UpdateSourceControls();
-        RunStatus.Text = _sourceMode == InstallationSourceMode.Online ? "在线安装将在执行时获取最新可用版本。" : "已切换为本地安装包。";
-        SaveState();
-    }
-
-    private void PackageDirectory_Click(object sender, RoutedEventArgs e)
-    {
-        if (_isRunning) return;
-        var picker = new OpenFolderDialog { Title = "选择安装包目录", Multiselect = false };
-        if (Directory.Exists(_localInstallerDirectory)) picker.InitialDirectory = _localInstallerDirectory;
-        if (picker.ShowDialog(this) != true) return;
-        _localInstallerDirectory = picker.FolderName;
-        _settings = ReadSettings();
-        UpdatePathHints();
-        UpdateSourceControls();
-        SaveState();
-    }
-
-    private void UpdateSourceControls()
-    {
-        foreach (var button in SourceChoice.Children.OfType<Button>())
-        {
-            var active = button.Tag as string == _sourceMode.ToString();
-            button.Background = Brush(active ? "#FFFFFF" : "#F3F5F9");
-            button.Foreground = Brush(active ? "#4366E9" : "#8A95A7");
-            button.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
-        }
-        var local = _sourceMode == InstallationSourceMode.Local;
-        PackageDirectoryButton.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
-        SourceHint.Text = local ? _localInstallerDirectory : "官方渠道 · 安装时获取最新可用版本";
-        SourceHint.ToolTip = local ? "安装包单独存放，无需与程序封装在一起。\n" + _localInstallerDirectory : "在线来源与本地安装包分别使用，不会自动切换。";
-        if (local)
-        {
-            var available = _rows.Count(r => InstallerSources.GetCapabilities(r.App, _settings).IsAvailable);
-            WingetStatus.Text = $"本地安装包 · {available} 个可用";
-        }
-        else
-        {
-            var requiresWinget = _rows.Any(row => InstallerSources.UsesWinget(row.App, _settings));
-            WingetStatus.Text = !requiresWinget ? "在线安装源已就绪" : !_sourceCheckCompleted ? "正在检查在线安装源…" : _wingetReady ? "在线安装源已就绪" : "部分在线来源暂不可用";
-        }
+        var requiresWinget = _rows.Any(row => InstallerSources.UsesWinget(row.App, _settings));
+        WingetStatus.Text = !requiresWinget || _sourceCheckCompleted && _wingetReady
+            ? "安装时自动检查官方更新"
+            : !_sourceCheckCompleted ? "正在检查安装服务…" : "部分 WinGet 应用暂不可用";
     }
 
     private void SaveState()
@@ -295,7 +239,7 @@ public partial class MainWindow : Window
             Directory.CreateDirectory(_stateDirectory);
             var state = new SavedState
             {
-                SchemaVersion = 4,
+                SchemaVersion = 5,
                 Settings = _settings,
                 CustomApps = _customApps,
                 AppPaths = _rows.Where(r => !string.IsNullOrWhiteSpace(r.TargetPath)).ToDictionary(r => r.App.Id, r => r.TargetPath.Trim())
@@ -382,7 +326,7 @@ public partial class MainWindow : Window
     private void UpdateRowPath(AppRow row)
     {
         var capabilities = InstallerSources.GetCapabilities(row.App, _settings);
-        row.UpdateSource(capabilities);
+        row.UpdateSource(capabilities, InstallerSources.GetProfile(row.App, _settings)?.InteractiveFallback == true);
         try
         {
             row.PathHint = DriveResolver.ResolveTarget(row.App, row.TargetPath, _settings, _drives);
@@ -478,6 +422,7 @@ public partial class MainWindow : Window
         if (selected.Count == 0) { RunStatus.Text = "请先选择需要安装的应用。"; return; }
         var blocked = 0;
         AppendLog($"── 安装计划：{selected.Count} 个应用 ──");
+        AppendLog($"安装时检查官方更新并自动复用已校验缓存：{Path.Combine(AppContext.BaseDirectory, "Local Installer")}");
         foreach (var row in selected)
         {
             try
@@ -496,7 +441,7 @@ public partial class MainWindow : Window
         }
         RunStatus.Text = $"安装计划已生成：{selected.Count - blocked} 个可执行，{blocked} 个被阻止。";
         LogExpander.IsExpanded = true;
-        RunHint.Text = "预览不下载、不创建安装目录。在线安装将在执行时获取当前版本。";
+        RunHint.Text = "预览不联网下载。安装时检查官方更新，校验并复用缓存；无可用缓存时下载。";
         SaveState();
     }
 
@@ -517,6 +462,7 @@ public partial class MainWindow : Window
         RunStatus.Text = $"正在部署 {selected.Count} 个应用…";
         RunHint.Text = "已接受所选软件及 WinGet 源协议。Windows 管理员授权提示仍需在本机确认。";
         AppendLog($"── 开始部署：{selected.Count} 个应用；静默安装 {(_settings.Silent ? "开启" : "关闭")} ──");
+        AppendLog($"自动缓存：{Path.Combine(AppContext.BaseDirectory, "Local Installer")}；安装时检查官方更新。");
         var progress = new Progress<InstallUpdate>(update =>
         {
             var row = _rows.FirstOrDefault(r => r.App.Id == update.AppId);
@@ -572,14 +518,11 @@ public partial class MainWindow : Window
         RefreshDrivesButton.IsEnabled = !running;
         EditRootButton.IsEnabled = !running;
         AddCustomButton.IsEnabled = !running;
-        SourceChoice.IsEnabled = !running;
-        PackageDirectoryButton.IsEnabled = !running;
         SearchBox.IsEnabled = !running;
         SelectVisibleButton.IsEnabled = !running;
         ClearSelectionButton.IsEnabled = !running;
         SkipInstalledCheck.IsEnabled = !running;
         SilentCheck.IsEnabled = !running;
-        KeepInstallersCheck.IsEnabled = !running;
         if (AdminButton.Content is string text && !text.StartsWith('✓')) AdminButton.IsEnabled = !running;
         foreach (var row in _rows) row.IsEditable = !running;
         foreach (var button in RoleButtons.Children.OfType<Button>()) button.IsEnabled = !running;
@@ -670,7 +613,7 @@ public partial class MainWindow : Window
         SaveState();
     }
 
-    public async void RenderSmokeTest(string path, string? role = null, InstallationSourceMode? sourceMode = null)
+    public async void RenderSmokeTest(string path, string? role = null)
     {
         _smokeTest = true;
         if (!string.IsNullOrWhiteSpace(role) && RoleButtons.Children.OfType<Button>().Any(button => button.Tag as string == role))
@@ -681,24 +624,18 @@ public partial class MainWindow : Window
             _view.Refresh();
             UpdateSummary();
         }
-        if (sourceMode is { } mode)
-        {
-            _sourceMode = mode;
-            _settings = ReadSettings();
-            UpdatePathHints();
-            UpdateSourceControls();
-        }
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         await Task.Delay(250);
         UpdateLayout();
         var content = (FrameworkElement)Content;
         var dpi = VisualTreeHelper.GetDpi(content);
-        var size = new Size(content.ActualWidth + 60, content.ActualHeight + 48);
+        var margin = content.Margin;
+        var size = new Size(content.ActualWidth + margin.Left + margin.Right, content.ActualHeight + margin.Top + margin.Bottom);
         var visual = new DrawingVisual();
         using (var context = visual.RenderOpen())
         {
             context.DrawRectangle(Background, null, new Rect(size));
-            context.DrawRectangle(new VisualBrush(content), null, new Rect(30, 25, content.ActualWidth, content.ActualHeight));
+            context.DrawRectangle(new VisualBrush(content), null, new Rect(margin.Left, margin.Top, content.ActualWidth, content.ActualHeight));
         }
         var bitmap = new RenderTargetBitmap((int)(size.Width * dpi.DpiScaleX), (int)(size.Height * dpi.DpiScaleY), 96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);
         bitmap.Render(visual);
@@ -743,8 +680,8 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     public string IconColor => App.Category switch { "公共" => "#667DD3", "运营" => "#C18A52", "客服" => "#62A187", "短视频" => "#9475B9", _ => "#8192AB" };
     public string SilentLabel => _interactiveFallback ? "常规安装·预填目录" : _capabilities.SilentSupported ? "支持静默" : "需手动安装";
     public string LocationLabel => _interactiveFallback ? "向导将预填目标目录，请确认后安装" : _capabilities.LocationSupported ? "可指定目录" : "请在安装向导中选择此目标目录";
-    public string SourceLabel => $"{_capabilities.SourceLabel} · {(!_capabilities.IsAvailable ? App.LocalInstaller is not null && _capabilities.SourceLabel == "本地" ? "缺少安装包" : "暂不可用" : SilentLabel)}";
-    public string SourceHint => $"{_capabilities.Message}\n{SilentLabel} · {LocationLabel}";
+    public string SourceLabel => $"{(App.OnlineInstaller is not null ? "自动缓存" : _capabilities.SourceLabel)} · {(!_capabilities.IsAvailable ? "暂不可用" : SilentLabel)}";
+    public string SourceHint => $"{_capabilities.Message}\n{SilentLabel} · {LocationLabel}" + (App.OnlineInstaller is not null ? $"\n安装时检查官方更新，校验并复用缓存。\n{Path.Combine(AppContext.BaseDirectory, "Local Installer")}" : "");
     public string SourceColor => _capabilities.IsAvailable ? "#94A0B1" : "#BD925E";
     public bool Selected { get => _selected; set => Set(ref _selected, value); }
     public bool IsEditable { get => _isEditable; set => Set(ref _isEditable, value); }
@@ -760,10 +697,10 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     public string StatusColor { get => _statusColor; private set => Set(ref _statusColor, value); }
     public string StatusBackground { get => _statusBackground; private set => Set(ref _statusBackground, value); }
     public InstallState State { get; private set; } = InstallState.Pending;
-    public void UpdateSource(InstallerCapabilities capabilities)
+    public void UpdateSource(InstallerCapabilities capabilities, bool interactiveFallback)
     {
         _capabilities = capabilities;
-        _interactiveFallback = (capabilities.SourceLabel == "本地" ? App.LocalInstaller : (InstallerProfile?)App.OnlineInstaller)?.InteractiveFallback == true;
+        _interactiveFallback = interactiveFallback;
         foreach (var property in new[] { nameof(SourceLabel), nameof(SourceHint), nameof(SourceColor), nameof(CapabilitiesHint), nameof(SilentLabel), nameof(LocationLabel) })
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
     }

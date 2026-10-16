@@ -1,0 +1,71 @@
+{
+  "Application": "HM AppKit",
+  "Version": "0.7.0",
+  "Date": "2026-10-16",
+  "Operation": "Automatic installer source, retained cache and portable-path verification; no vendor installer executed",
+  "AutomatedTests": {
+    "Core": {
+      "Passed": 118,
+      "Failed": 0
+    },
+    "Jingmai": {
+      "Passed": 24,
+      "Failed": 0
+    },
+    "Cache": {
+      "Passed": 35,
+      "Failed": 0
+    },
+    "SelfUpdateDownload": {
+      "Passed": 42,
+      "Failed": 0
+    },
+    "SelfUpdateApply": {
+      "Passed": 33,
+      "Failed": 0
+    },
+    "TotalPassed": 252,
+    "TotalFailed": 0
+  },
+  "Interface": {
+    "DefaultWidthDip": 1010,
+    "DefaultHeightDip": 680,
+    "WindowState": "Normal",
+    "Columns": 3,
+    "SourceSwitchRemoved": true,
+    "InstallerDirectoryPickerRemoved": true,
+    "RetentionAlwaysEnabled": true,
+    "StartupDoesNotRefreshVendorCaches": true,
+    "NormalStartupAndPreviewObserved": true,
+    "PublicAndAllRolesRenderedAndInspected": true
+  },
+  "PortablePathProbe": {
+    "ApplicationVolume": "E:",
+    "WorkingDirectoryVolume": "C:",
+    "ResolvedInstallTarget": "D:\\Software\\Dewu",
+    "CacheRoot": "<portable-program-directory>\\Local Installer",
+    "ProviderUsesDefaultProgramRelativeRoot": true,
+    "LegacyModeAndRetiredDirectoryIgnored": true,
+    "InitialCacheVersion": "6.2.0",
+    "OfficialDownloadVersion": "6.2.5",
+    "Publisher": "上海得物信息集团有限公司",
+    "Bytes": 9947512,
+    "Sha256": "88CEB1114F0A70EC559E51EF3045F1789268148BF04D425152810DF355161056",
+    "OriginalManagedCacheReplacedAfterVerification": true,
+    "SecondCheckHttpStatus": 304,
+    "SameVerifiedPayloadReused": true,
+    "InstallerExecuted": false,
+    "PhysicalUsbPresent": false,
+    "FileSystem": "NTFS",
+    "PhysicalUsbFat32ExfatNotTested": true
+  },
+  "ConfigurationMigration": {
+    "SchemaFrom": 4,
+    "SchemaTo": 5,
+    "SourceModeTo": "Auto",
+    "RetiredInstallerDirectoryTo": "<current-program-directory>\\Local Installer",
+    "ApplicationInstallPathsPreserved": true,
+    "CustomApplicationsPreserved": true,
+    "OtherDeploymentOptionsPreserved": true
+  }
+}

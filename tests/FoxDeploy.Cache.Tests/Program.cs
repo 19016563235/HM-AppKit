@@ -113,16 +113,16 @@ await Test("Corrupted cached bytes are never used offline", async () =>
     File.WriteAllText(path, "signed:tampered cached bytes"); fixture.Server.Offline = true;
     await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Prepare(); });
 });
-await Test("KeepInstallers off uses temporary bytes and keeps historical package", async () =>
+await Test("Legacy KeepInstallers false still retains and atomically replaces the managed package", async () =>
 {
     using var fixture = new Fixture();
     string historical;
     await using (var payload = await fixture.Prepare()) historical = payload.FilePath;
-    fixture.Server.Bytes = Encoding.UTF8.GetBytes("signed:a temporary version"); fixture.Server.Tag = "\"temp\"";
-    string temporary;
+    fixture.Server.Bytes = Encoding.UTF8.GetBytes("signed:next automatic version"); fixture.Server.Tag = "\"next\"";
+    string updated;
     await using (var payload = await fixture.Provider.PrepareAsync(fixture.App, new DeploymentSettings { KeepInstallers = false }, fixture.Log, default))
-    { temporary = payload.FilePath; Check(!payload.IsCached && temporary.StartsWith(fixture.Temporary, StringComparison.OrdinalIgnoreCase), "Temporary option wrote persistent storage."); }
-    Check(!File.Exists(temporary) && File.Exists(historical), "Temporary disposal changed historical cache.");
+    { updated = payload.FilePath; Check(payload.IsCached && updated.StartsWith(fixture.Library, StringComparison.OrdinalIgnoreCase), "Legacy option bypassed fixed retention."); }
+    Check(File.Exists(updated) && !File.Exists(historical) && !Directory.Exists(fixture.Temporary), "Automatic package replacement did not persist or used old temporary storage.");
 });
 await Test("Startup only maintains cached online apps and preserves caller local mode", async () =>
 {
@@ -222,14 +222,126 @@ await Test("Changed source policy cannot silently reuse an old offline package",
     var changed = fixture.App with { OnlineInstaller = fixture.App.OnlineInstaller! with { DownloadUrl = "https://official.test/other.exe" } };
     await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(changed, new DeploymentSettings(), fixture.Log, default); });
 });
-await Test("Local-source bytes remain user-owned with retention enabled", async () =>
+await Test("Legacy Local mode ignores retired custom directory and uses automatic official source", async () =>
 {
     using var fixture = new Fixture();
     var source = Path.Combine(fixture.Root, "local.exe"); await File.WriteAllTextAsync(source, "signed:local source");
     var local = fixture.App with { LocalInstaller = new LocalInstallerDefinition { FileName = "local.exe", Sha256 = Hash(File.ReadAllBytes(source)), AllowedPublishers = ["Trusted Publisher"] } };
-    string temporary;
-    await using (var payload = await fixture.Provider.PrepareAsync(local, new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = fixture.Root }, fixture.Log, default)) temporary = payload.FilePath;
-    Check(!File.Exists(temporary) && File.Exists(source) && !Directory.Exists(fixture.Library), "User local archive was moved or removed.");
+    string retained;
+    await using (var payload = await fixture.Provider.PrepareAsync(local, new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = fixture.Root }, fixture.Log, default))
+    { retained = payload.FilePath; Check(payload.Sha256 == Hash(fixture.Server.Bytes), "Retired custom directory was used instead of official source."); }
+    Check(File.Exists(retained) && File.ReadAllText(source) == "signed:local source" && fixture.Server.Requests > 0, "Automatic source or source ownership violated.");
+});
+await Test("Loose root installer is hash and signature verified then reused offline from owned cache", async () =>
+{
+    using var fixture = new Fixture(); fixture.Server.Offline = true;
+    var bytes = Encoding.UTF8.GetBytes("signed:approved loose package");
+    var app = WithLooseProfile(fixture, bytes);
+    var source = Path.Combine(fixture.Library, app.LocalInstaller!.FileName);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(source, bytes);
+    string retained;
+    await using (var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default))
+    {
+        retained = payload.FilePath;
+        Check(payload.IsCached && !payload.LatestConfirmed && payload.Sha256 == Hash(bytes) && retained != source, "Verified root package was not safely imported for offline use.");
+    }
+    Check(File.Exists(retained) && File.Exists(source) && fixture.SignatureChecks >= 2 && fixture.Log.Lines.Any(line => line.Contains("未能确认")), "No repeated verification, retention, or offline disclosure.");
+});
+await Test("Imported loose package with current official manifest hash needs no payload download", async () =>
+{
+    using var fixture = new Fixture(manifest: true);
+    var app = WithLooseProfile(fixture, fixture.Server.Bytes);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(Path.Combine(fixture.Library, app.LocalInstaller!.FileName), fixture.Server.Bytes);
+    await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default);
+    Check(payload.LatestConfirmed && fixture.Server.Requests == 0, "Already-current imported package was downloaded again.");
+});
+await Test("Official newer package replaces imported managed copy and preserves user loose file", async () =>
+{
+    using var fixture = new Fixture(manifest: true);
+    var oldBytes = Encoding.UTF8.GetBytes("signed:approved old loose package"); var app = WithLooseProfile(fixture, oldBytes);
+    var source = Path.Combine(fixture.Library, app.LocalInstaller!.FileName);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(source, oldBytes);
+    await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default);
+    Check(payload.Sha256 == Hash(fixture.Server.Bytes) && payload.LatestConfirmed && File.ReadAllBytes(source).SequenceEqual(oldBytes), "New official package or loose source ownership lost.");
+    Check(Directory.EnumerateDirectories(Path.Combine(fixture.Library, app.Id), "package-*").Count() == 1, "Owned imported old copy was not replaced.");
+});
+await Test("Unapproved loose package hash is ignored and official source is used", async () =>
+{
+    using var fixture = new Fixture(); var app = WithLooseProfile(fixture, Encoding.UTF8.GetBytes("signed:expected file"));
+    var source = Path.Combine(fixture.Library, app.LocalInstaller!.FileName);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllTextAsync(source, "signed:unexpected file");
+    await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default);
+    Check(payload.Sha256 == Hash(fixture.Server.Bytes) && File.ReadAllText(source) == "signed:unexpected file" && fixture.Log.Lines.Any(line => line.Contains("未通过")), "Unapproved loose package used or original changed.");
+});
+await Test("Unapproved loose package cannot become an offline fallback", async () =>
+{
+    using var fixture = new Fixture(); fixture.Server.Offline = true;
+    var app = WithLooseProfile(fixture, Encoding.UTF8.GetBytes("signed:expected file"));
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllTextAsync(Path.Combine(fixture.Library, app.LocalInstaller!.FileName), "signed:wrong file");
+    await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default); });
+    Check(!Directory.EnumerateDirectories(Path.Combine(fixture.Library, app.Id), "package-*").Any(), "Unverified loose file was committed.");
+});
+await Test("Correct hash without the official publisher cannot import a loose online package", async () =>
+{
+    using var fixture = new Fixture(); fixture.Server.Offline = true;
+    var bad = Encoding.UTF8.GetBytes("unsigned:hash approved but unsigned"); var app = WithLooseProfile(fixture, bad);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(Path.Combine(fixture.Library, app.LocalInstaller!.FileName), bad);
+    await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default); });
+});
+await Test("Old loose installer with incompatible execution arguments cannot become offline fallback", async () =>
+{
+    using var fixture = new Fixture(); fixture.Server.Offline = true;
+    var bytes = Encoding.UTF8.GetBytes("signed:valid older incompatible installer");
+    var app = WithLooseProfile(fixture, bytes);
+    app = app with { LocalInstaller = app.LocalInstaller! with { InstallerType = "msi", FileName = "approved-local.msi" } };
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(Path.Combine(fixture.Library, app.LocalInstaller!.FileName), bytes);
+    await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default); });
+    Check(fixture.Log.Lines.Any(line => line.Contains("安装参数")), "Incompatible local installer was not explained.");
+});
+await Test("Local-only custom app imports pinned package then reuses cache without online claims", async () =>
+{
+    using var fixture = new Fixture(); var bytes = Encoding.UTF8.GetBytes("signed:local-only approved");
+    var app = WithLooseProfile(fixture, bytes) with { OnlineInstaller = null };
+    var source = Path.Combine(fixture.Library, app.LocalInstaller!.FileName);
+    Directory.CreateDirectory(fixture.Library); await File.WriteAllBytesAsync(source, bytes);
+    string first;
+    await using (var payload = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default))
+    { first = payload.FilePath; Check(payload.IsCached && !payload.LatestConfirmed, "Local-only package falsely claimed latest."); }
+    File.Delete(source);
+    await using var cached = await fixture.Provider.PrepareAsync(app, new DeploymentSettings(), fixture.Log, default);
+    Check(cached.FilePath == first && fixture.Server.Requests == 0 && fixture.Log.Lines.Any(line => line.Contains("无法检查官网更新")), "Local-only cache not reused or online limitation omitted.");
+});
+await Test("Local-only app never reads its old custom source when fixed directory has no package", async () =>
+{
+    using var fixture = new Fixture(); var bytes = Encoding.UTF8.GetBytes("signed:retired-source-only");
+    var app = WithLooseProfile(fixture, bytes) with { OnlineInstaller = null };
+    var retired = Path.Combine(fixture.Root, app.LocalInstaller!.FileName); await File.WriteAllBytesAsync(retired, bytes);
+    await Throws<FileNotFoundException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(app,
+        new DeploymentSettings { SourceMode = InstallationSourceMode.Local, LocalInstallerDirectory = fixture.Root }, fixture.Log, default); });
+    Check(File.Exists(retired) && fixture.Server.Requests == 0, "Retired external source read or changed.");
+});
+await Test("Portable cache survives directory relocation and offline reuse", async () =>
+{
+    using var fixture = new Fixture(); await using (var payload = await fixture.Prepare()) { }
+    var moved = Path.Combine(fixture.Root, "USB AppKit", "Local Installer"); Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
+    Directory.Move(fixture.Library, moved); fixture.Server.Offline = true;
+    using var movedProvider = new InstallerPayloadProvider(installerLibraryRoot: moved, httpMessageHandler: fixture.Server,
+        signatureVerifier: (path, publishers) => File.ReadAllText(path).StartsWith("signed:", StringComparison.Ordinal) && publishers.Contains("Trusted Publisher") ? "Trusted Publisher" : throw new InvalidDataException("bad publisher"));
+    await using var movedPackage = await movedProvider.PrepareAsync(fixture.App, new DeploymentSettings(), fixture.Log, default);
+    Check(movedPackage.FilePath.StartsWith(moved, StringComparison.Ordinal) && movedPackage.IsCached && !movedPackage.LatestConfirmed, "Cache metadata incorrectly depends on absolute app path.");
+});
+await Test("Default installer root follows AppContext instead of current working directory", () =>
+{
+    var previous = Environment.CurrentDirectory;
+    using var fixture = new Fixture();
+    try
+    {
+        Environment.CurrentDirectory = fixture.Root;
+        using var provider = new InstallerPayloadProvider();
+        Check(provider.InstallerLibraryRoot == Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Local Installer")), "Default cache inherited launch working directory.");
+    }
+    finally { Environment.CurrentDirectory = previous; }
+    return Task.CompletedTask;
 });
 await Test("Unwritable library does not silently redirect retained packages", async () =>
 {
@@ -255,6 +367,10 @@ async Task Test(string name, Func<Task> action)
 }
 static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
+static AppDefinition WithLooseProfile(Fixture fixture, byte[] approvedBytes) => fixture.App with
+{
+    LocalInstaller = new LocalInstallerDefinition { FileName = "approved-local.exe", Sha256 = Hash(approvedBytes), AllowedPublishers = ["Trusted Publisher"] }
+};
 static async Task Throws<T>(Func<Task> action) where T : Exception
 {
     try { await action(); } catch (T) { return; }

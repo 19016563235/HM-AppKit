@@ -50,8 +50,8 @@ public sealed class DeploymentEngine
         {
             DrivePriority = [.. settings.DrivePriority ?? []], SelectedDrive = settings.SelectedDrive, BaseFolder = settings.BaseFolder,
             RequireCustomLocation = settings.RequireCustomLocation, Silent = settings.Silent, SkipInstalled = settings.SkipInstalled,
-            SourceMode = settings.SourceMode, LocalInstallerDirectory = settings.LocalInstallerDirectory,
-            KeepInstallers = settings.KeepInstallers
+            SourceMode = InstallationSourceMode.Auto, LocalInstallerDirectory = InstallerSources.InstallerDirectory,
+            KeepInstallers = true
         };
         if (queue.Select(r => r.App.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != queue.Length)
             throw new ArgumentException("一个安装队列中不能包含重复应用。", nameof(requests));
@@ -97,7 +97,7 @@ public sealed class DeploymentEngine
                     }
                     if (usesWinget && !IsWingetAvailable)
                     {
-                        progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, "此应用的在线安装需要 WinGet，请安装 Microsoft“应用安装程序”或切换本地安装包。"));
+                        progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, "此自定义应用需要 WinGet，请安装 Microsoft“应用安装程序”。"));
                         continue;
                     }
                     if (snapshot.SkipInstalled && usesWinget)
@@ -135,7 +135,8 @@ public sealed class DeploymentEngine
                         ? await new JingmaiInstaller(_processRunner).RunAsync(payload!.FilePath, plan.TargetDirectory!, _installTimeout, log, cancellationToken).ConfigureAwait(false)
                         : await _processRunner.RunAsync(new ProcessRequest(plan.IsWinget ? _wingetPath! : plan.ExecutablePath, plan.Arguments, _installTimeout, ProtectInstaller: true)
                     {
-                        UnquotedFinalArgument = plan.UnquotedFinalArgument
+                        UnquotedFinalArgument = plan.UnquotedFinalArgument,
+                        WorkingDirectory = payload is null ? null : Path.GetDirectoryName(payload.FilePath)
                     }, log, cancellationToken).ConfigureAwait(false);
                     haltedByTimeout = result.TimedOut;
                     if (IsAlreadyInstalled(result.ExitCode))

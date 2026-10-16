@@ -49,7 +49,7 @@ public static class InstallerPlanFactory
     {
         var app = request.App;
         var profile = InstallerSources.GetProfile(app, settings)
-            ?? throw new NotSupportedException($"{app.Name} 未配置此来源的安装包，请切换来源。");
+            ?? throw new NotSupportedException($"{app.Name} 未配置可核验的安装包来源。");
         var silent = settings.Silent && profile.SilentSupported;
         if (settings.Silent && !profile.SilentSupported && !profile.InteractiveFallback)
             throw new NotSupportedException($"{app.Name} 的此来源未确认支持静默安装，请取消静默选项后重试。");
@@ -57,11 +57,6 @@ public static class InstallerPlanFactory
             throw new NotSupportedException($"{app.Name} 的此来源未确认支持静默指定目录，请取消静默选项并在安装向导中选择目录。");
 
         var executable = PayloadPlaceholder;
-        if (settings.SourceMode == InstallationSourceMode.Local)
-        {
-            var source = InstallerSources.ResolveLocalPath(app, settings);
-            if (!File.Exists(source)) throw new FileNotFoundException($"未找到 {app.LocalInstaller!.FileName}，请选择正确的本地安装包目录。", source);
-        }
         // Even a manual-only installer has a requested target: verify the user's final
         // choice against it after the wizard exits, rather than accepting a default drive.
         var target = DriveResolver.ResolveTarget(app, request.TargetDirectory, settings, drives);

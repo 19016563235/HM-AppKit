@@ -35,10 +35,10 @@ internal static class InstallerSourceTests
 
         try
         {
-            await Case("Source mode routes online to WinGet and local to configured payload", () =>
+            await Case("Legacy source settings all route to automatic configured payload", () =>
             {
-                Check(Plan(app, new DeploymentSettings()).IsWinget, "Online Winget route expected");
-                Check(!Plan(app, Local()).IsWinget, "Local profile must bypass Winget");
+                foreach (var mode in Enum.GetValues<InstallationSourceMode>())
+                    Check(!Plan(app, new DeploymentSettings { SourceMode = mode }).IsWinget, "Automatic local-only profile must bypass WinGet for " + mode);
             });
             await Case("Official online profile takes precedence over a WinGet identifier", () =>
                 Check(!Plan(app with { OnlineInstaller = onlineProfile }, new DeploymentSettings()).IsWinget, "Configured online payload expected"));
@@ -48,10 +48,28 @@ internal static class InstallerSourceTests
                 var plan = Plan(definition, new DeploymentSettings { LocalInstallerDirectory = @"Z:\Missing" });
                 Check(!plan.IsWinget && plan.Arguments[^1] == "/D=" + target, "Online plan must be available before staging");
             });
-            await Case("Local source without a profile never silently falls back to WinGet", () =>
-                Throws<NotSupportedException>(() => Plan(app with { LocalInstaller = null }, Local())));
-            await Case("Missing local file fails before installer execution", () =>
-                Throws<FileNotFoundException>(() => Plan(app with { LocalInstaller = localProfile with { FileName = "missing.exe" } }, Local())));
+            await Case("Package-only custom applications retain their explicit WinGet route", () =>
+                Check(Plan(app with { LocalInstaller = null }, Local()).IsWinget, "Configured package identifier must retain WinGet fallback."));
+            await Case("Preview never requires files in the retired user-selected source", () =>
+                Check(!Plan(app with { LocalInstaller = localProfile with { FileName = "missing.exe" } }, Local()).IsWinget, "Local-only packages must be resolved during payload verification."));
+            await Case("Old settings normalize to Auto and fixed program-relative retention", () =>
+            {
+                var options = Local(); options.KeepInstallers = false;
+                InstallerSources.NormalizeSettings(options);
+                Check(options.SourceMode == InstallationSourceMode.Auto && options.KeepInstallers && options.LocalInstallerDirectory == Path.Combine(AppContext.BaseDirectory, "Local Installer"), "Legacy source and retention settings survived normalization.");
+                Check(InstallerSources.ResolveLocalPath(app, Local()) == Path.Combine(AppContext.BaseDirectory, "Local Installer", localProfile.FileName), "Retired source directory was used.");
+            });
+            await Case("Automatic source always uses reviewed official install arguments", () =>
+            {
+                var definition = app with { OnlineInstaller = onlineProfile with { InstallerType = "exe", SilentArguments = ["--quiet"], InstallLocationArgument = "--target={InstallDirectory}" } };
+                foreach (var mode in Enum.GetValues<InstallationSourceMode>())
+                    Check(Plan(definition, new DeploymentSettings { SourceMode = mode }).Arguments.SequenceEqual(["--quiet", "--target=" + target]), "Legacy source selected outdated local install arguments.");
+            });
+            await Case("USB-hosted payload can target a different internal drive", () =>
+            {
+                var plan = InstallerPlanFactory.BindPayload(Plan(app, Local()), @"Z:\USB AppKit\Local Installer\example\package-123\setup.exe");
+                Check(plan.ExecutablePath.StartsWith(@"Z:\", StringComparison.Ordinal) && plan.TargetDirectory == target, "Payload location incorrectly restricted target drive.");
+            });
             await Case("NSIS silent and custom-directory arguments preserve the complete path", () =>
             {
                 var plan = Plan(app, Local());
@@ -146,7 +164,7 @@ internal static class InstallerSourceTests
                 var updates = new List<InstallUpdate>();
                 await Engine(runner, new SourceProbe(), payload).RunAsync([new InstallRequest(app with { OnlineInstaller = onlineProfile }, target)],
                     new DeploymentSettings { SkipInstalled = false }, new SourceProgress<InstallUpdate>(updates.Add), new SourceProgress<string>(_ => { }));
-                Check(runner.Requests.Count == 1 && runner.Requests[0].FileName == installer && payload.Mode == InstallationSourceMode.Online, "Online route must use staged payload");
+                Check(runner.Requests.Count == 1 && runner.Requests[0].FileName == installer && payload.Mode == InstallationSourceMode.Auto, "Automatic route must use staged payload");
             });
             await test("Local registry skip neither prepares a payload nor runs a process", async () =>
             {
@@ -155,13 +173,21 @@ internal static class InstallerSourceTests
                     new SourceProgress<InstallUpdate>(updates.Add), new SourceProgress<string>(_ => { }));
                 Check(updates[^1].State == InstallState.AlreadyInstalled && payload.Calls == 0 && runner.Requests.Count == 0, "Existing app must be skipped before payload access");
             });
-            await test("Queue snapshots both source mode and local package directory", async () =>
+            await test("Queue normalizes legacy source and retention settings before later mutation", async () =>
             {
                 var options = Local(); options.KeepInstallers = false; var payload = new SourcePayload(installer); var runner = new SourceRunner();
                 await Engine(runner, new SourceProbe(), payload).RunAsync([new InstallRequest(app, target)], options,
                     new SourceProgress<InstallUpdate>(update => { if (update.State == InstallState.Pending) { options.SourceMode = InstallationSourceMode.Online; options.LocalInstallerDirectory = @"Z:\Missing"; options.KeepInstallers = true; } }),
                     new SourceProgress<string>(_ => { }));
-                Check(payload.Mode == InstallationSourceMode.Local && payload.Directory == fixture && !payload.Keep && runner.Requests.Count == 1, "Queue settings must be immutable for this run, including package retention");
+                Check(payload.Mode == InstallationSourceMode.Auto && payload.Directory == InstallerSources.InstallerDirectory && payload.Keep && runner.Requests.Count == 1, "Queue used retired source or disabled fixed retention.");
+            });
+            await test("USB source uses its absolute package working directory without restricting internal target", async () =>
+            {
+                var source = @"Z:\USB AppKit\Local Installer\example\package-123\setup.exe";
+                var runner = new SourceRunner();
+                await Engine(runner, new SourceProbe(), new SourcePayload(source)).RunAsync([new InstallRequest(app, target)], Local(),
+                    new SourceProgress<InstallUpdate>(_ => { }), new SourceProgress<string>(_ => { }));
+                Check(runner.Requests.Single().FileName == source && runner.Requests[0].WorkingDirectory == Path.GetDirectoryName(source), "Source working directory was inherited or changed to the target drive.");
             });
             await test("Manual direct installer still fails a mismatched final directory", async () =>
             {
