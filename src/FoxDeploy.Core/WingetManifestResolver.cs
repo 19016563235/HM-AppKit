@@ -13,17 +13,24 @@ public static partial class WingetManifestResolver
 {
     private static readonly HttpClient Client = CreateClient();
 
-    public static async Task<WingetResolvedInstaller> ResolveAsync(OnlineInstallerDefinition profile, CancellationToken cancellationToken = default)
+    public static Task<WingetResolvedInstaller> ResolveAsync(OnlineInstallerDefinition profile, CancellationToken cancellationToken = default)
+        => ResolveAsync(profile, Client, cancellationToken);
+
+    // One attempt only. InstallerPayloadProvider owns the bounded retry of the entire listing/raw operation.
+    // Injection is for small fake HTTP tests; production still uses the fixed no-redirect client above.
+    public static async Task<WingetResolvedInstaller> ResolveAsync(OnlineInstallerDefinition profile, HttpClient client, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(client);
         ValidateManifestPath(profile.WingetManifestPath);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(90));
         var path = profile.WingetManifestPath;
-        var listing = await ReadBoundedAsync(new Uri("https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/" + path), timeout.Token);
+        var listing = await ReadBoundedAsync(client, new Uri("https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/" + path), "WinGet 版本列表查询", timeout.Token);
         var version = FindLatestVersion(listing);
         var packageId = string.Join('.', path.Split('/').Skip(1));
         var manifest = new Uri($"https://raw.githubusercontent.com/microsoft/winget-pkgs/master/manifests/{path}/{version}/{packageId}.installer.yaml");
-        var yaml = await ReadBoundedAsync(manifest, timeout.Token);
+        var yaml = await ReadBoundedAsync(client, manifest, "WinGet 安装清单查询", timeout.Token);
         return ParseManifest(yaml, packageId, version, profile, RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64");
     }
 
@@ -84,22 +91,51 @@ public static partial class WingetManifestResolver
         return value.Trim('"', '\'');
     }
 
-    private static async Task<string> ReadBoundedAsync(Uri uri, CancellationToken token)
+    private static async Task<string> ReadBoundedAsync(HttpClient client, Uri uri, string stage, CancellationToken token)
     {
-        using var response = await Client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
-        if (response.StatusCode == HttpStatusCode.Forbidden || (int)response.StatusCode == 429)
-            throw new HttpRequestException("WinGet 版本服务暂时限流，稍后会重试；已有安装包仍会重新校验后使用。");
-        response.EnsureSuccessStatusCode();
-        if (response.Content.Headers.ContentLength > 2097152) throw new InvalidDataException("WinGet 元数据过大。");
-        await using var input = await response.Content.ReadAsStreamAsync(token);
-        using var output = new MemoryStream();
-        var buffer = new byte[8192];
-        while (await input.ReadAsync(buffer, token) is var size && size > 0)
+        HttpResponseMessage fetched;
+        try { fetched = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Security.Authentication.AuthenticationException)
         {
-            if (output.Length + size > 2097152) throw new InvalidDataException("WinGet 元数据过大。");
-            output.Write(buffer, 0, size);
+            InstallerNetwork.WithContext(ex, stage, uri);
+            throw;
         }
-        return System.Text.Encoding.UTF8.GetString(output.ToArray());
+        using (var response = fetched)
+        {
+            if (response.StatusCode == HttpStatusCode.Forbidden || (int)response.StatusCode == 429)
+                throw InstallerNetwork.RequestFailure(new HttpRequestException(
+                    response.StatusCode == HttpStatusCode.Forbidden ? "WinGet 版本服务拒绝访问（HTTP 403）。" : "WinGet 版本服务暂时限流（HTTP 429）。",
+                    null, response.StatusCode), stage, uri);
+            try { response.EnsureSuccessStatusCode(); }
+            catch (HttpRequestException ex) { InstallerNetwork.WithContext(ex, stage, uri); throw; }
+            if (response.Content.Headers.ContentLength > 2097152) throw new InvalidDataException("WinGet 元数据过大。");
+            Stream input;
+            try { input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false); }
+            catch (OperationCanceledException ex) when (token.IsCancellationRequested)
+            { InstallerNetwork.WithContext(ex, stage, uri); throw; }
+            catch (Exception ex) when (ex is IOException or HttpRequestException or OperationCanceledException)
+            { throw InstallerNetwork.ReadFailure(ex, stage, uri); }
+            await using (input)
+            {
+                using var output = new MemoryStream();
+                var buffer = new byte[8192];
+                while (true)
+                {
+                    int size;
+                    try { size = await input.ReadAsync(buffer, token).ConfigureAwait(false); }
+                    catch (OperationCanceledException ex) when (token.IsCancellationRequested)
+                    { InstallerNetwork.WithContext(ex, stage, uri); throw; }
+                    catch (Exception ex) when (ex is IOException or HttpRequestException or OperationCanceledException)
+                    { throw InstallerNetwork.ReadFailure(ex, stage, uri); }
+                    if (size == 0) break;
+                    if (output.Length + size > 2097152) throw new InvalidDataException("WinGet 元数据过大。");
+                    output.Write(buffer, 0, size);
+                }
+                if (response.Content.Headers.ContentLength is { } length && output.Length != length)
+                    throw InstallerNetwork.ReadFailure(new EndOfStreamException("WinGet 响应未完整接收。"), stage, uri);
+                return System.Text.Encoding.UTF8.GetString(output.ToArray());
+            }
+        }
     }
 
     private static HttpClient CreateClient()

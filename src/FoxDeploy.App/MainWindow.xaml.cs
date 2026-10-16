@@ -77,7 +77,7 @@ public partial class MainWindow : Window
             if (_smokeTest) return;
             await Task.WhenAll(CheckWingetAsync(), CheckSelfUpdateAsync(manual: false));
         };
-        AppendLog("已就绪。安装时自动检查官方更新并校验缓存；安装包保存在程序旁 Local Installer 文件夹。");
+        AppendLog($"HM AppKit v{CurrentAppVersion} 已就绪。安装时自动检查官方更新并校验缓存；安装包保存在程序旁 Local Installer 文件夹。");
         RunStatus.ToolTip = Path.Combine(AppContext.BaseDirectory, "Local Installer");
     }
 
@@ -444,7 +444,7 @@ public partial class MainWindow : Window
                 _terminalIds.Add(update.AppId);
             UpdateRunProgress(selected.Count);
             RunStatus.Text = $"{row.App.Name} · {update.Message}";
-            AppendLog($"[{row.App.Name}] {update.Message}");
+            if (!update.IsLogged) AppendLog($"[{row.App.Name}] {update.Message}");
         });
         try
         {

@@ -326,7 +326,8 @@ await Test("Portable cache survives directory relocation and offline reuse", asy
     var moved = Path.Combine(fixture.Root, "USB AppKit", "Local Installer"); Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
     Directory.Move(fixture.Library, moved); fixture.Server.Offline = true;
     using var movedProvider = new InstallerPayloadProvider(installerLibraryRoot: moved, httpMessageHandler: fixture.Server,
-        signatureVerifier: (path, publishers) => File.ReadAllText(path).StartsWith("signed:", StringComparison.Ordinal) && publishers.Contains("Trusted Publisher") ? "Trusted Publisher" : throw new InvalidDataException("bad publisher"));
+        signatureVerifier: (path, publishers) => File.ReadAllText(path).StartsWith("signed:", StringComparison.Ordinal) && publishers.Contains("Trusted Publisher") ? "Trusted Publisher" : throw new InvalidDataException("bad publisher"),
+        retryDelay: (_, token) => { token.ThrowIfCancellationRequested(); return Task.CompletedTask; });
     await using var movedPackage = await movedProvider.PrepareAsync(fixture.App, new DeploymentSettings(), fixture.Log, default);
     Check(movedPackage.FilePath.StartsWith(moved, StringComparison.Ordinal) && movedPackage.IsCached && !movedPackage.LatestConfirmed, "Cache metadata incorrectly depends on absolute app path.");
 });
@@ -480,7 +481,8 @@ sealed class Fixture : IDisposable
             SignatureChecks++;
             if (!File.ReadAllText(path).StartsWith("signed:", StringComparison.Ordinal) || !publishers.Contains("Trusted Publisher")) throw new InvalidDataException("Fixture publisher rejected.");
             return "Trusted Publisher";
-        }, (profile, token) => Task.FromResult(new WingetResolvedInstaller(new Uri("https://official.test/setup.exe"), ExpectedHash!, "1.0.0")));
+        }, (profile, token) => Task.FromResult(new WingetResolvedInstaller(new Uri("https://official.test/setup.exe"), ExpectedHash!, "1.0.0")),
+        retryDelay: (_, token) => { token.ThrowIfCancellationRequested(); return Task.CompletedTask; });
     }
     public Task<PreparedInstaller> Prepare() => Provider.PrepareAsync(App, new DeploymentSettings(), Log, default);
     public JsonObject Index() => JsonNode.Parse(File.ReadAllText(IndexPath))!.AsObject();

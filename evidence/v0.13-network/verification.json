@@ -1,0 +1,67 @@
+{
+  "Version": "0.13.0",
+  "Date": "2026-10-16",
+  "Scope": "Network retry, diagnostics and verified installer cache; no vendor installer execution",
+  "FullRegression": {
+    "Passed": 289,
+    "Failed": 0,
+    "Suites": {
+      "Core": 118,
+      "Jingmai": 24,
+      "Cache": 35,
+      "Network": 37,
+      "UpdateDownload": 42,
+      "UpdateApply": 33
+    },
+    "WindowsX64PublishSucceeded": true
+  },
+  "NetworkRegression": {
+    "Passed": 37,
+    "Failed": 0,
+    "MaximumAttemptsPerOperation": 3,
+    "RetryDelaysSeconds": [1, 2],
+    "DownloadResumesFromPartialFile": false,
+    "Covers": [
+      "HTTP headers and response body failures",
+      "Interrupted download and premature EOF",
+      "Transient HTTP statuses and exhausted retries",
+      "Cancellation before and during retry or body read",
+      "Old verified cache and index preserved after failure",
+      "No retry for hash, signature, host, format or disk errors",
+      "One detailed failure log and no repeated installer execution",
+      "Safe error stage, host, attempt and socket diagnostics"
+    ]
+  },
+  "LiveDownloads": [
+    {
+      "AppId": "weixin",
+      "DownloadHost": "dldir1v6.qq.com",
+      "Version": "4.1.15.53",
+      "Bytes": 256557480,
+      "Sha256": "AA727E6CC74CD7C4E101C350D125508B0230A8A19C1F5304BF6F33DDE2E758C5",
+      "VerifiedPublisher": "Tencent Technology (Shenzhen) Company Limited",
+      "Passes": 2,
+      "SecondPass": "Official manifest hash unchanged; same verified local package reused",
+      "LatestConfirmed": true,
+      "CacheRetained": true,
+      "InstallerExecuted": false
+    },
+    {
+      "AppId": "todesk",
+      "DownloadHost": "dl.todesk.com",
+      "Version": "5.2.1.0",
+      "Bytes": 159362472,
+      "Sha256": "CEECA98F86EB8FE79F6A7622B02D41B5031496119C13385E5D9718C134118995",
+      "VerifiedPublisher": "Hainan YouQu Technology Co., Ltd",
+      "Passes": 2,
+      "SecondPass": "HTTP 304; same verified local package reused",
+      "LatestConfirmed": true,
+      "CacheRetained": true,
+      "InstallerExecuted": false
+    }
+  ],
+  "Limitations": [
+    "A persistent network restriction can still fail after the bounded retries",
+    "The other computer requires a new run to confirm its network and installation result"
+  ]
+}

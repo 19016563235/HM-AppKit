@@ -162,19 +162,19 @@ public sealed class DeploymentEngine
                 }
                 catch (NotSupportedException ex)
                 {
-                    log.Report($"[{request.App.Name}] {ex.Message}");
-                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Skipped, ex.Message));
+                    log.Report($"[{request.App.Name}] {InstallerNetwork.DescribeFailure(ex)}");
+                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Skipped, InstallerNetwork.SafeSummary(ex)) { IsLogged = true });
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 740)
                 {
                     const string message = "此安装程序需要管理员权限，请点击右上角“管理员运行”后重试。";
-                    log.Report($"[{request.App.Name}] {message}");
-                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, message, request.TargetDirectory));
+                    log.Report($"[{request.App.Name}] {message} {InstallerNetwork.DescribeFailure(ex)}");
+                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, message, request.TargetDirectory) { IsLogged = true });
                 }
                 catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or InvalidDataException or IOException or UnauthorizedAccessException or Win32Exception or HttpRequestException or TaskCanceledException or System.Security.Cryptography.CryptographicException or System.Text.RegularExpressions.RegexMatchTimeoutException)
                 {
-                    log.Report($"[{request.App.Name}] {ex.Message}");
-                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, ex.Message, request.TargetDirectory));
+                    log.Report($"[{request.App.Name}] {InstallerNetwork.DescribeFailure(ex)}");
+                    progress.Report(new InstallUpdate(request.App.Id, InstallState.Failed, InstallerNetwork.SafeSummary(ex), request.TargetDirectory) { IsLogged = true });
                 }
             }
         }

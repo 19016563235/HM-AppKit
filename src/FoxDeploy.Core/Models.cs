@@ -43,7 +43,10 @@ public sealed record DriveSnapshot(string Name, string Root, bool IsReady, long 
     public string BusType { get; init; } = "Unknown";
 }
 public enum InstallState { Pending, Checking, Installing, Succeeded, AlreadyInstalled, Failed, Skipped, Cancelled, Unverified }
-public sealed record InstallUpdate(string AppId, InstallState State, string Message, string? TargetDirectory = null);
+public sealed record InstallUpdate(string AppId, InstallState State, string Message, string? TargetDirectory = null)
+{
+    public bool IsLogged { get; init; }
+}
 
 public sealed record InstallPlan(AppDefinition App, string? TargetDirectory, IReadOnlyList<string> Arguments, bool UsesDefaultLocation, bool IsSilent)
 {
