@@ -41,12 +41,13 @@
           <ControlTemplate TargetType="CheckBox">
             <Grid x:Name="SelectionSurface" Background="Transparent" SnapsToDevicePixels="True">
               <Border x:Name="SelectionFocus" Margin="-2" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" IsHitTestVisible="False" />
-              <Border x:Name="SelectionCircle" Width="17" Height="17" CornerRadius="8.5" Background="White" BorderBrush="#C8D1E0" BorderThickness="1.4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Border x:Name="SelectionCircle" Width="18" Height="18" CornerRadius="9" Background="White" BorderBrush="#C8D1E0" BorderThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Border x:Name="SelectionCenter" Width="8" Height="8" CornerRadius="4" Background="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#849BED" /><Setter TargetName="SelectionCircle" Property="Background" Value="#F4F7FF" /></Trigger>
-              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SelectionCircle" Property="Background" Value="{StaticResource Accent}" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="{StaticResource Accent}" /></Trigger>
-              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SelectionCircle" Property="Background" Value="#A6B6F1" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#A6B6F1" /></Trigger>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SelectionCircle" Property="Background" Value="White" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="{StaticResource Accent}" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /></Trigger>
+              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#A6B6F1" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /><Setter TargetName="SelectionCenter" Property="Background" Value="#A6B6F1" /></Trigger>
               <Trigger Property="IsPressed" Value="True"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.76" /></Trigger>
               <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SelectionFocus" Property="BorderBrush" Value="#8299ED" /></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.4" /></Trigger>

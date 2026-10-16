@@ -670,7 +670,7 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     private string _pathColor = "#7C8CA3";
     private string _status = "待安装";
     private string _statusMessage = "";
-    private string _statusColor = "#9AA4B5";
+    private string _statusDotColor = "#A7B0BE";
     private string _statusBackground = "#FFFFFF";
     private InstallerCapabilities _capabilities = new(false, false, false, "", "正在检查安装源。");
     private bool _interactiveFallback;
@@ -698,7 +698,8 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     public string PathColor { get => _pathColor; set => Set(ref _pathColor, value); }
     public string Status { get => _status; private set => Set(ref _status, value); }
     public string StatusMessage { get => _statusMessage; private set => Set(ref _statusMessage, value); }
-    public string StatusColor { get => _statusColor; private set => Set(ref _statusColor, value); }
+    public string StatusColor => "#8793A5";
+    public string StatusDotColor { get => _statusDotColor; private set => Set(ref _statusDotColor, value); }
     public string StatusBackground { get => _statusBackground; private set => Set(ref _statusBackground, value); }
     public InstallState State { get; private set; } = InstallState.Pending;
     public void UpdateSource(InstallerCapabilities capabilities, bool interactiveFallback, bool usesSilent)
@@ -715,17 +716,17 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
         StatusMessage = message;
         Status = state switch
         {
-            InstallState.Pending => "待安装", InstallState.Checking => "检查中", InstallState.Installing => "安装中",
-            InstallState.Succeeded => "已完成", InstallState.AlreadyInstalled => "已安装", InstallState.Failed => "失败",
+            InstallState.Pending => "待安装", InstallState.Checking => "安装中", InstallState.Installing => "安装中",
+            InstallState.Succeeded => "已安装", InstallState.AlreadyInstalled => "已安装", InstallState.Failed => "失败",
             InstallState.Skipped => "已阻止", InstallState.Cancelled => "未执行", InstallState.Unverified => "待核验", _ => "等待"
         };
-        (StatusColor, StatusBackground) = state switch
+        (StatusDotColor, StatusBackground) = state switch
         {
             InstallState.Succeeded or InstallState.AlreadyInstalled => ("#228867", "#E8F7F0"),
-            InstallState.Installing or InstallState.Checking => ("#3266D2", "#EAF0FF"),
+            InstallState.Installing or InstallState.Checking => ("#D5A026", "#FFF7DF"),
             InstallState.Failed => ("#C35454", "#FCEEEE"),
             InstallState.Skipped or InstallState.Unverified => ("#AE7731", "#FFF5E6"),
-            _ => ("#9AA4B5", "#FFFFFF")
+            _ => ("#A7B0BE", "#FFFFFF")
         };
     }
     public event PropertyChangedEventHandler? PropertyChanged;
