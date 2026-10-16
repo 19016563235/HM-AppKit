@@ -2,17 +2,19 @@
   <Application.Resources>
     <SolidColorBrush x:Key="Ink" Color="#202E45" />
     <SolidColorBrush x:Key="Muted" Color="#7C889C" />
-    <SolidColorBrush x:Key="Accent" Color="#4366E9" />
+    <SolidColorBrush x:Key="Accent" Color="#7483B6" />
+    <SolidColorBrush x:Key="PrimaryAction" Color="#657394" />
+    <SolidColorBrush x:Key="SelectionAccent" Color="#93A7FD" />
     <SolidColorBrush x:Key="Line" Color="#E7EBF2" />
     <BooleanToVisibilityConverter x:Key="BoolVisibility" />
     <Style TargetType="Window"><Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" /><Setter Property="FontSize" Value="13" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="Background" Value="#F5F7FA" /></Style>
     <Style x:Key="Caption" TargetType="TextBlock"><Setter Property="FontSize" Value="11" /><Setter Property="Foreground" Value="{StaticResource Muted}" /></Style>
     <Style TargetType="Button">
       <Setter Property="Background" Value="White" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="BorderBrush" Value="{StaticResource Line}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="Padding" Value="14,9" /><Setter Property="Cursor" Value="Hand" /><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="HorizontalContentAlignment" Value="Center" /><Setter Property="FocusVisualStyle" Value="{x:Null}" />
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="ButtonBorder" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.76" /></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.62" /></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#9CAEEE" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.4" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="ButtonBorder" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.76" /></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.62" /></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#A8B4D1" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.4" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="#7C889C" /><Setter Property="FontSize" Value="11" /><Setter Property="Padding" Value="9,5" /></Style>
-    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource Accent}" /><Setter Property="BorderBrush" Value="{StaticResource Accent}" /><Setter Property="Foreground" Value="White" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource PrimaryAction}" /><Setter Property="BorderBrush" Value="{StaticResource PrimaryAction}" /><Setter Property="Foreground" Value="White" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
     <Style x:Key="EditIconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="Width" Value="28" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="0" />
       <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="#8190A8" />
@@ -24,9 +26,9 @@
               <Path x:Name="EditGlyph" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.45" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M3,10.8 L3.7,7.9 L10,1.6 C10.5,1.1 11.3,1.1 11.8,1.6 L12.4,2.2 C12.9,2.7 12.9,3.5 12.4,4 L6.1,10.3 Z M9,2.6 L11.4,5 M3.7,7.9 L6.1,10.3 M2.5,12.8 L12.8,12.8" />
             </Border>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#EDF2FF" /><Setter TargetName="EditGlyph" Property="Stroke" Value="{StaticResource Accent}" /></Trigger>
-              <Trigger Property="IsPressed" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#E2E9FF" /></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="EditSurface" Property="BorderBrush" Value="#8299ED" /><Setter TargetName="EditSurface" Property="Background" Value="#F0F4FF" /></Trigger>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#F0F2F6" /><Setter TargetName="EditGlyph" Property="Stroke" Value="{StaticResource Accent}" /></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="EditSurface" Property="Background" Value="#E8ECF2" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="EditSurface" Property="BorderBrush" Value="#A8B4D1" /><Setter TargetName="EditSurface" Property="Background" Value="#F3F5F8" /></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="EditSurface" Property="Opacity" Value="0.38" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -41,15 +43,15 @@
           <ControlTemplate TargetType="CheckBox">
             <Grid x:Name="SelectionSurface" Background="Transparent" SnapsToDevicePixels="True">
               <Border x:Name="SelectionFocus" Margin="-2" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" IsHitTestVisible="False" />
-              <Border x:Name="SelectionCircle" Width="18" Height="18" CornerRadius="9" Background="White" BorderBrush="#C8D1E0" BorderThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <Border x:Name="SelectionCenter" Width="8" Height="8" CornerRadius="4" Background="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
+              <Border x:Name="SelectionCircle" Width="18" Height="18" CornerRadius="9" Background="Transparent" BorderBrush="#C6CCD5" BorderThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Border x:Name="SelectionCenter" Width="8" Height="8" CornerRadius="4" Background="{StaticResource SelectionAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
             </Grid>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#849BED" /><Setter TargetName="SelectionCircle" Property="Background" Value="#F4F7FF" /></Trigger>
-              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SelectionCircle" Property="Background" Value="White" /><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="{StaticResource Accent}" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /></Trigger>
-              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#A6B6F1" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /><Setter TargetName="SelectionCenter" Property="Background" Value="#A6B6F1" /></Trigger>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#8C9ECB" /></Trigger>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="{StaticResource SelectionAccent}" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /></Trigger>
+              <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SelectionCircle" Property="BorderBrush" Value="#ADB9DC" /><Setter TargetName="SelectionCenter" Property="Visibility" Value="Visible" /><Setter TargetName="SelectionCenter" Property="Background" Value="#ADB9DC" /></Trigger>
               <Trigger Property="IsPressed" Value="True"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.76" /></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SelectionFocus" Property="BorderBrush" Value="#8299ED" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SelectionFocus" Property="BorderBrush" Value="#A8B4D1" /></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SelectionSurface" Property="Opacity" Value="0.4" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -73,11 +75,11 @@
               <ContentPresenter Grid.Column="1" ContentSource="Content" RecognizesAccessKey="True" Margin="6,0,0,0" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
             </Grid>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SwitchRail" Property="Background" Value="#34C759" /><Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" /></Trigger>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="SwitchRail" Property="Background" Value="#7FA18C" /><Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" /></Trigger>
               <Trigger Property="IsChecked" Value="{x:Null}"><Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Center" /></Trigger>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SwitchRail" Property="Opacity" Value="0.88" /></Trigger>
               <Trigger Property="IsPressed" Value="True"><Setter TargetName="SwitchRail" Property="Opacity" Value="0.76" /></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchFocus" Property="BorderBrush" Value="#8299ED" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SwitchFocus" Property="BorderBrush" Value="#A8B4D1" /></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SwitchSurface" Property="Opacity" Value="0.4" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -120,7 +122,7 @@
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="Orientation" Value="Horizontal"><Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" /><Setter TargetName="PageDecrease" Property="Command" Value="{x:Static ScrollBar.PageLeftCommand}" /><Setter TargetName="PageIncrease" Property="Command" Value="{x:Static ScrollBar.PageRightCommand}" /></Trigger>
-              <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ScrollFocus" Property="BorderBrush" Value="#A6B7EF" /></Trigger>
+              <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ScrollFocus" Property="BorderBrush" Value="#A8B4D1" /></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ScrollSurface" Property="Opacity" Value="0.35" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -143,8 +145,8 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <Style TargetType="TextBox"><Setter Property="Padding" Value="10,7" /><Setter Property="Background" Value="White" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="BorderBrush" Value="#E4E9F1" /><Setter Property="BorderThickness" Value="1" /><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" /></Border><ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="BorderBrush" Value="#91A6F4" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-    <Style TargetType="CheckBox"><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Cursor" Value="Hand" /><Setter Property="Foreground" Value="#718096" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Border x:Name="CheckBorder" Width="16" Height="16" CornerRadius="4" Background="White" BorderBrush="#D1D9E7" BorderThickness="1"><TextBlock x:Name="CheckGlyph" Text="✓" Foreground="White" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" /></Border><ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" /></StackPanel><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckBorder" Property="Background" Value="{StaticResource Accent}" /><Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource Accent}" /><Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" /></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="#8299ED" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style TargetType="TextBox"><Setter Property="Padding" Value="10,7" /><Setter Property="Background" Value="White" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="BorderBrush" Value="#E4E9F1" /><Setter Property="BorderThickness" Value="1" /><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border CornerRadius="7" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" /></Border><ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="BorderBrush" Value="#A8B4D1" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style TargetType="CheckBox"><Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Cursor" Value="Hand" /><Setter Property="Foreground" Value="#718096" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Border x:Name="CheckBorder" Width="16" Height="16" CornerRadius="4" Background="White" BorderBrush="#D1D9E7" BorderThickness="1"><TextBlock x:Name="CheckGlyph" Text="✓" Foreground="White" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" /></Border><ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" /></StackPanel><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckBorder" Property="Background" Value="{StaticResource Accent}" /><Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource Accent}" /><Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" /></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="#A8B4D1" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
     <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="White" /><Setter Property="BorderBrush" Value="{StaticResource Line}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="13" /></Style>
   </Application.Resources>
 </Application>

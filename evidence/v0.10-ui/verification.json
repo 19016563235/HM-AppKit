@@ -1,0 +1,539 @@
+{
+  "Application": "HM AppKit",
+  "Version": "0.10.0",
+  "Date": "2026-10-16",
+  "InterfaceBehavior": {
+    "Passed": 46,
+    "Failed": 0,
+    "Mode": "Isolated in-process WPF controls; state injection only; no vendor install, startup network checks, OS input injection or settings writes",
+    "HostDpi": {
+      "DpiScaleX": 1.5,
+      "DpiScaleY": 1.5,
+      "PixelsPerDip": 1.5
+    },
+    "CountPositions": [
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 0,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 79.33333333333333
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 9,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 79.33333333333333
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 10,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 86
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 99,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 86
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 999,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 92.66666666666667
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 11,
+        "Count": 9999,
+        "SelectX": 152,
+        "ClearX": 190.00000000000003,
+        "SlotWidth": 100,
+        "MeasureWidth": 100,
+        "TextDesiredWidth": 100
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 0,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 119.33333333333333
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 9,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 119.33333333333333
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 10,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 129.33333333333334
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 99,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 129.33333333333334
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 999,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 139.33333333333334
+      },
+      {
+        "Font": "Microsoft YaHei UI",
+        "FontSize": 16.5,
+        "Count": 9999,
+        "SelectX": 201.33333333333334,
+        "ClearX": 239.33333333333334,
+        "SlotWidth": 149.33333333333334,
+        "MeasureWidth": 149.33333333333334,
+        "TextDesiredWidth": 149.33333333333334
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 0,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 78
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 9,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 78
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 10,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 84
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 99,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 84
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 999,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 90.66666666666667
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 11,
+        "Count": 9999,
+        "SelectX": 148,
+        "ClearX": 186.66666666666669,
+        "SlotWidth": 96.66666666666667,
+        "MeasureWidth": 96.66666666666667,
+        "TextDesiredWidth": 96.66666666666667
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 0,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 117.33333333333333
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 9,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 117.33333333333333
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 10,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 126.66666666666667
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 99,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 126.66666666666667
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 999,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 135.33333333333334
+      },
+      {
+        "Font": "Segoe UI",
+        "FontSize": 16.5,
+        "Count": 9999,
+        "SelectX": 196.00000000000003,
+        "ClearX": 234.66666666666669,
+        "SlotWidth": 144.66666666666666,
+        "MeasureWidth": 144.66666666666666,
+        "TextDesiredWidth": 144.66666666666666
+      }
+    ],
+    "StatusResults": [
+      {
+        "State": "Pending",
+        "Status": "待安装",
+        "StatusDotColor": "#A7B0BE",
+        "BoundText": "待安装",
+        "BoundColor": "#FFA7B0BE",
+        "Tooltip": "Injected test state Pending; no installer was launched."
+      },
+      {
+        "State": "Checking",
+        "Status": "安装中",
+        "StatusDotColor": "#B59B64",
+        "BoundText": "安装中",
+        "BoundColor": "#FFB59B64",
+        "Tooltip": "Injected test state Checking; no installer was launched."
+      },
+      {
+        "State": "Installing",
+        "Status": "安装中",
+        "StatusDotColor": "#B59B64",
+        "BoundText": "安装中",
+        "BoundColor": "#FFB59B64",
+        "Tooltip": "Injected test state Installing; no installer was launched."
+      },
+      {
+        "State": "Succeeded",
+        "Status": "已安装",
+        "StatusDotColor": "#6B8F7B",
+        "BoundText": "已安装",
+        "BoundColor": "#FF6B8F7B",
+        "Tooltip": "Injected test state Succeeded; no installer was launched."
+      },
+      {
+        "State": "AlreadyInstalled",
+        "Status": "已安装",
+        "StatusDotColor": "#6B8F7B",
+        "BoundText": "已安装",
+        "BoundColor": "#FF6B8F7B",
+        "Tooltip": "Injected test state AlreadyInstalled; no installer was launched."
+      },
+      {
+        "State": "Failed",
+        "Status": "失败",
+        "StatusDotColor": "#B47D7D",
+        "BoundText": "失败",
+        "BoundColor": "#FFB47D7D",
+        "Tooltip": "Injected test state Failed; no installer was launched."
+      },
+      {
+        "State": "Skipped",
+        "Status": "已阻止",
+        "StatusDotColor": "#AD956E",
+        "BoundText": "已阻止",
+        "BoundColor": "#FFAD956E",
+        "Tooltip": "Injected test state Skipped; no installer was launched."
+      },
+      {
+        "State": "Cancelled",
+        "Status": "未执行",
+        "StatusDotColor": "#A7B0BE",
+        "BoundText": "未执行",
+        "BoundColor": "#FFA7B0BE",
+        "Tooltip": "Injected test state Cancelled; no installer was launched."
+      },
+      {
+        "State": "Unverified",
+        "Status": "待核验",
+        "StatusDotColor": "#AD956E",
+        "BoundText": "待核验",
+        "BoundColor": "#FFAD956E",
+        "Tooltip": "Injected test state Unverified; no installer was launched."
+      }
+    ],
+    "Checks": [
+      {
+        "Name": "Small normal window",
+        "Pass": true
+      },
+      {
+        "Name": "Both settings use iOS templates",
+        "Pass": true
+      },
+      {
+        "Name": "Main accent has lower saturation than v0.9",
+        "Pass": true
+      },
+      {
+        "Name": "Selector uses the pale lavender blue reference",
+        "Pass": true
+      },
+      {
+        "Name": "White primary-button text retains WCAG AA contrast",
+        "Pass": true
+      },
+      {
+        "Name": "Settings can be temporarily enabled independently of user preferences",
+        "Pass": true
+      },
+      {
+        "Name": "All eleven catalog apps visible",
+        "Pass": true
+      },
+      {
+        "Name": "All models start as gray pending",
+        "Pass": true
+      },
+      {
+        "Name": "Silent supported apps have muted green badges",
+        "Pass": true
+      },
+      {
+        "Name": "Jingmai has gray regular badge",
+        "Pass": true
+      },
+      {
+        "Name": "Turning silent off updates every badge",
+        "Pass": true
+      },
+      {
+        "Name": "Turning silent on restores supported badges",
+        "Pass": true
+      },
+      {
+        "Name": "Every card uses independent circular selector",
+        "Pass": true
+      },
+      {
+        "Name": "Select all updates every independent model",
+        "Pass": true
+      },
+      {
+        "Name": "Multiple selections can be cleared independently",
+        "Pass": true
+      },
+      {
+        "Name": "Multiple selections can be restored independently",
+        "Pass": true
+      },
+      {
+        "Name": "Thin ring keeps a transparent interior and independent solid center (False)",
+        "Pass": true
+      },
+      {
+        "Name": "Thin ring keeps a transparent interior and independent solid center (True)",
+        "Pass": true
+      },
+      {
+        "Name": "Thin ring keeps a transparent interior and independent solid center (False)",
+        "Pass": true
+      },
+      {
+        "Name": "Rendered ring gaps reveal each surface and selected solid centers match reference",
+        "Pass": true
+      },
+      {
+        "Name": "All card editors have icon-only content and names",
+        "Pass": true
+      },
+      {
+        "Name": "Root edit is icon-only",
+        "Pass": true
+      },
+      {
+        "Name": "Each editor remains left of and vertically centered with its selector",
+        "Pass": true
+      },
+      {
+        "Name": "Card edit opens and cancels without changing selections",
+        "Pass": true
+      },
+      {
+        "Name": "Counter reserves matching four-digit hidden measurement",
+        "Pass": true
+      },
+      {
+        "Name": "Counter fits and all/clear stay fixed for six counts (Microsoft YaHei UI, 11)",
+        "Pass": true
+      },
+      {
+        "Name": "Counter fits and all/clear stay fixed for six counts (Microsoft YaHei UI, 16.5)",
+        "Pass": true
+      },
+      {
+        "Name": "Counter fits and all/clear stay fixed for six counts (Segoe UI, 11)",
+        "Pass": true
+      },
+      {
+        "Name": "Counter fits and all/clear stay fixed for six counts (Segoe UI, 16.5)",
+        "Pass": true
+      },
+      {
+        "Name": "Status uses independent live bindings for text and dot",
+        "Pass": true
+      },
+      {
+        "Name": "State Pending: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Checking: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Installing: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Succeeded: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State AlreadyInstalled: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Failed: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Skipped: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Cancelled: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "State Unverified: truthful live text, muted dot and detailed tooltip",
+        "Pass": true
+      },
+      {
+        "Name": "App scroll area uses custom track without arrow buttons",
+        "Pass": true
+      },
+      {
+        "Name": "Scrollbar page command advances content",
+        "Pass": true
+      },
+      {
+        "Name": "Thumb drag events advance content",
+        "Pass": true
+      },
+      {
+        "Name": "Search still filters through custom text scroll host",
+        "Pass": true
+      },
+      {
+        "Name": "Log uses custom scrollbar and scrolls",
+        "Pass": true
+      },
+      {
+        "Name": "Progress has descriptive accessible name",
+        "Pass": true
+      },
+      {
+        "Name": "User settings hashes unchanged after close",
+        "Pass": true
+      }
+    ]
+  },
+  "VisualChecks": [
+    "Muted light interface at 150% DPI",
+    "Reference-colored selector on light card and dark reference background with transparent gap"
+  ],
+  "Palette": {
+    "Accent": "#7483B6",
+    "PrimaryAction": "#657394",
+    "SelectionRingAndCenter": "#93A7FD",
+    "SelectionInterior": "Transparent",
+    "SwitchOn": "#7FA18C"
+  },
+  "UserConfigurationUnchanged": true,
+  "VendorInstallerExecuted": false,
+  "CoreRegressionTests": {
+    "Core": 118,
+    "Jingmai": 24,
+    "Cache": 35,
+    "UpdateDownload": 42,
+    "UpdateApply": 33,
+    "Passed": 252,
+    "Failed": 0
+  }
+}

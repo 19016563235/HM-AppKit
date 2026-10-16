@@ -278,8 +278,8 @@ public partial class MainWindow : Window
             var letter = drive.Name.TrimEnd(':', '\\', '/').ToUpperInvariant();
             var selected = letter == _selectedDrive;
             return new DriveCard(letter, $"{letter}盘", $"{drive.AvailableBytes / 1073741824d:0.0} GB 可用",
-                selected ? "#F0F3FF" : "#FAFBFD", selected ? "#9DAFF2" : "#EDF0F5",
-                selected ? "#4366E9" : "#3D4D66",
+                selected ? "#F3F5F8" : "#FAFBFD", selected ? "#B6BFD5" : "#EDF0F5",
+                selected ? "#7483B6" : "#3D4D66",
                 selected ? "当前安装磁盘；点击其他盘符可切换。" : $"将跟随根目录的应用安装到 {letter}: 盘。");
         }).ToList();
         AutoDriveButton.Visibility = _explicitSelectedDrive is null ? Visibility.Collapsed : Visibility.Visible;
@@ -332,12 +332,12 @@ public partial class MainWindow : Window
         try
         {
             row.PathHint = DriveResolver.ResolveTarget(row.App, row.TargetPath, _settings, _drives);
-            row.PathColor = capabilities.LocationSupported ? "#77869C" : "#AC8454";
+            row.PathColor = capabilities.LocationSupported ? "#77869C" : "#AD956E";
         }
         catch (Exception ex)
         {
             row.PathHint = ex.Message;
-            row.PathColor = "#C16C5C";
+            row.PathColor = "#B47D7D";
         }
     }
 
@@ -378,8 +378,8 @@ public partial class MainWindow : Window
         foreach (var button in RoleButtons.Children.OfType<Button>())
         {
             var active = (string)button.Tag == _role;
-            button.Background = Brush(active ? "#EDF1FF" : "#FFFFFF");
-            button.Foreground = Brush(active ? "#4366E9" : "#8995A8");
+            button.Background = Brush(active ? "#F3F5F8" : "#FFFFFF");
+            button.Foreground = Brush(active ? "#7483B6" : "#8995A8");
             button.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         }
     }
@@ -679,11 +679,11 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
     public ImageSource? Logo { get; } = AppLogoAssets.Get(app.Id);
     public string Detail => $"{App.Category} · {App.Description}";
     public string Initial => string.IsNullOrEmpty(App.Name) ? "+" : App.Name[..1].ToUpperInvariant();
-    public string IconBackground => App.Category switch { "公共" => "#EEF2FF", "运营" => "#FFF3E8", "客服" => "#EAF5F0", "短视频" => "#F3EEFC", _ => "#EDF1F7" };
-    public string IconColor => App.Category switch { "公共" => "#667DD3", "运营" => "#C18A52", "客服" => "#62A187", "短视频" => "#9475B9", _ => "#8192AB" };
+    public string IconBackground => App.Category switch { "公共" => "#F1F3F7", "运营" => "#F6F3EF", "客服" => "#F0F5F2", "短视频" => "#F3F1F6", _ => "#F1F3F6" };
+    public string IconColor => App.Category switch { "公共" => "#7D89AC", "运营" => "#A6927C", "客服" => "#819D8E", "短视频" => "#9C8DAA", _ => "#8995A8" };
     public string InstallModeLabel => _usesSilent ? "静默" : "常规";
-    public string InstallModeColor => _usesSilent ? "#228867" : "#8490A2";
-    public string InstallModeBackground => _usesSilent ? "#E8F7F0" : "#F0F2F6";
+    public string InstallModeColor => _usesSilent ? "#6B8F7B" : "#8490A2";
+    public string InstallModeBackground => _usesSilent ? "#EFF4F1" : "#F0F2F6";
     public string SilentLabel => _usesSilent ? "静默安装" : _interactiveFallback ? "常规安装·预填目录" : "常规安装";
     public string LocationLabel => _interactiveFallback && !_usesSilent ? "向导将预填目标目录，请确认后安装" : _capabilities.LocationSupported ? "可指定目录" : "请在安装向导中选择此目标目录";
     public string SourceHint => $"{_capabilities.Message}\n{SilentLabel} · {LocationLabel}" + (App.OnlineInstaller is not null ? $"\n安装时检查官方更新，校验并复用缓存。\n{Path.Combine(AppContext.BaseDirectory, "Local Installer")}" : "");
@@ -722,10 +722,10 @@ public sealed class AppRow(AppDefinition app) : INotifyPropertyChanged
         };
         (StatusDotColor, StatusBackground) = state switch
         {
-            InstallState.Succeeded or InstallState.AlreadyInstalled => ("#228867", "#E8F7F0"),
-            InstallState.Installing or InstallState.Checking => ("#D5A026", "#FFF7DF"),
-            InstallState.Failed => ("#C35454", "#FCEEEE"),
-            InstallState.Skipped or InstallState.Unverified => ("#AE7731", "#FFF5E6"),
+            InstallState.Succeeded or InstallState.AlreadyInstalled => ("#6B8F7B", "#EFF4F1"),
+            InstallState.Installing or InstallState.Checking => ("#B59B64", "#F6F3EC"),
+            InstallState.Failed => ("#B47D7D", "#F8F0F0"),
+            InstallState.Skipped or InstallState.Unverified => ("#AD956E", "#F6F3ED"),
             _ => ("#A7B0BE", "#FFFFFF")
         };
     }
@@ -742,7 +742,7 @@ internal sealed class PathEditDialog : Window
 {
     private readonly TextBox _path = new();
     private readonly CheckBox _useDefault = new() { Content = "跟随安装根目录", Margin = new Thickness(0, 0, 0, 14) };
-    private readonly TextBlock _error = new() { Foreground = Brushes.IndianRed, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0), FontSize = 11 };
+    private readonly TextBlock _error = new() { Foreground = new SolidColorBrush(Color.FromRgb(180, 125, 125)), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0), FontSize = 11 };
     private readonly Action<string> _validate;
     private readonly bool _allowDefault;
     public string Value { get; private set; } = "";
