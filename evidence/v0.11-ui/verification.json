@@ -1,0 +1,70 @@
+{
+  "Application": "HM AppKit",
+  "Version": "0.11.0",
+  "Date": "2026-10-16",
+  "InterfaceBehavior": {
+    "Passed": 8,
+    "Failed": 0,
+    "Mode": "Offscreen in-process WPF; no system input injection, vendor execution, startup network checks or settings writes",
+    "Checks": [
+      {
+        "Name": "All catalog cards use the application selector and keyboard-only focus style",
+        "Pass": true
+      },
+      {
+        "Name": "Select all keeps independent models selected",
+        "Pass": true
+      },
+      {
+        "Name": "Two cards can be cleared independently while others remain selected",
+        "Pass": true
+      },
+      {
+        "Name": "A card can be restored without selecting its neighbor",
+        "Pass": true
+      },
+      {
+        "Name": "Selected is a solid soft dot and pale halo with no old ring",
+        "Pass": true
+      },
+      {
+        "Name": "Unselected hides core and halo and restores the empty ring",
+        "Pass": true
+      },
+      {
+        "Name": "Count changes retain the fixed all/clear button positions",
+        "Pass": true
+      },
+      {
+        "Name": "Current and historical settings hashes unchanged",
+        "Pass": true
+      }
+    ]
+  },
+  "Selector": {
+    "Style": "Soft glow dot",
+    "CoreDiameter": 11.16,
+    "HaloDiameter": 17.36,
+    "CoreColor": "#93A7FD",
+    "HaloColor": "#E5EBFF",
+    "SelectedOutlineVisible": false,
+    "UnselectedOutlineDiameter": 18,
+    "HitArea": "20x20",
+    "KeyboardOnlyFocusAdorner": true
+  },
+  "VisualChecks": [
+    "Light main interface with selected soft dots and unselected empty circle",
+    "Actual-size and enlarged selected/unselected selector preview"
+  ],
+  "UserConfigurationUnchanged": true,
+  "VendorInstallerExecuted": false,
+  "CoreRegressionTests": {
+    "Core": 118,
+    "Jingmai": 24,
+    "Cache": 35,
+    "UpdateDownload": 42,
+    "UpdateApply": 33,
+    "Passed": 252,
+    "Failed": 0
+  }
+}
