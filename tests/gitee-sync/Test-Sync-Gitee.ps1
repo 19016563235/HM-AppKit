@@ -47,9 +47,9 @@ try {
     $package.Files[$script:HmPackageName + '.sha256'] = [pscustomobject]@{ Path = $checksumPath; Hash = Get-HmHash $checksumPath; Asset = $shaAsset }
 
     Test-Case 'small metadata requests use a 60-second deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $false -HasDownload $false) -eq 60) }
-    Test-Case 'file uploads use a 30-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $false) -eq 1800) }
+    Test-Case 'file uploads use a 60-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $false) -eq 3600) }
     Test-Case 'file downloads retain a 15-minute deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $false -HasDownload $true) -eq 900) }
-    Test-Case 'upload takes precedence over download when selecting the deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $true) -eq 1800) }
+    Test-Case 'upload takes precedence over download when selecting the deadline' { Assert-True ((Get-HmHttpTimeoutSeconds -HasUpload $true -HasDownload $true) -eq 3600) }
     Test-Case 'official Bearer authentication attaches only to fixed-repository POSTs' {
         foreach ($path in @('/releases', '/releases/73/attach_files')) {
             $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, ($script:HmGiteeApi + $path))

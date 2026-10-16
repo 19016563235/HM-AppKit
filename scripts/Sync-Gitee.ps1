@@ -32,7 +32,7 @@ function Test-HmDownloadRedirect([uri]$Initial, [uri]$Destination) {
 }
 
 function Get-HmHttpTimeoutSeconds([bool]$HasUpload, [bool]$HasDownload) {
-    if ($HasUpload) { return 1800 }
+    if ($HasUpload) { return 3600 }
     if ($HasDownload) { return 900 }
     return 60
 }
