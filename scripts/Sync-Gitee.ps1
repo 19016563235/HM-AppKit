@@ -140,7 +140,15 @@ function Invoke-HmHttp {
                         $request.Content = [System.Net.Http.StringContent]::new($json, [Text.Encoding]::UTF8, 'application/json')
                     }
                 }
-                $response = $client.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead, $deadline.Token).GetAwaiter().GetResult()
+                $pending = $client.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead, $deadline.Token)
+                if ($UploadPath) {
+                    while (-not $pending.Wait(30000)) {
+                        # File consumption is diagnostic only; it does not prove server receipt.
+                        $consumed = if ($stream -and $stream.CanSeek) { $stream.Position } else { 0L }
+                        Write-Host ('HM sync phase=upload event=progress file={0} read_bytes={1} elapsed_ms={2} http=0' -f $fileLabel, $consumed, $elapsed.ElapsedMilliseconds)
+                    }
+                }
+                $response = $pending.GetAwaiter().GetResult()
                 $status = [int]$response.StatusCode
                 if ($status -in @(301, 302, 303, 307, 308)) {
                     # Never resend a POST body (and its credential) across a redirect.
