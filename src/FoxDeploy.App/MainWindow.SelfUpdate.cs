@@ -31,7 +31,7 @@ public partial class MainWindow
     private void InitializeSelfUpdater()
     {
         SelfUpdateCheckButton.Content = $"v{CurrentAppVersion} · 检查更新";
-        SelfUpdateCheckButton.ToolTip = "启动时自动检查 HM AppKit 的 GitHub Releases，也可点击重新检查。";
+        SelfUpdateCheckButton.ToolTip = "启动时优先检查 Gitee 发行版，必要时回退 GitHub；点击可重新检查。";
     }
 
     private async void SelfUpdateCheck_Click(object sender, RoutedEventArgs e) => await CheckSelfUpdateAsync(manual: true);

@@ -9,31 +9,33 @@ using System.Text.RegularExpressions;
 
 namespace FoxDeploy.Core;
 
-/// <summary>Checks one fixed public GitHub repository and stages verified updates; never changes the running app or its state.</summary>
+/// <summary>Checks fixed public release repositories and stages verified updates; never changes the running app or its state.</summary>
 public sealed class SelfUpdateClient : IDisposable
 {
     public const string Repository = "19016563235/HM-AppKit";
+    public const string GiteeRepository = "huanmeng-it/HM-AppKit";
     public const string PackageAssetName = "HM-AppKit-win-x64.zip";
     public const string ChecksumAssetName = PackageAssetName + ".sha256";
     public const string ExecutableName = "HM AppKit.exe";
     private static readonly Uri LatestReleaseUri = new($"https://api.github.com/repos/{Repository}/releases/latest");
+    private static readonly Uri GiteeLatestReleaseUri = new($"https://gitee.com/api/v5/repos/{GiteeRepository}/releases/latest");
     private const int MetadataLimit = 1024 * 1024;
     private const int ChecksumLimit = 32 * 1024;
     private readonly SelfUpdateOptions _options;
     private readonly HttpClient _http;
     private readonly Action<string, string> _verifyExecutable;
     private readonly Func<TimeSpan, CancellationToken, Task>? _retryDelay;
-    private string? _releaseETag;
-    private byte[]? _releaseJson;
+    private readonly Dictionary<string, (string? ETag, byte[] Json)> _metadataCache = new(StringComparer.Ordinal);
 
     public SelfUpdateClient(SelfUpdateOptions? options = null, HttpMessageHandler? handler = null,
         Action<string, string>? executableVersionVerifier = null, Func<TimeSpan, CancellationToken, Task>? retryDelay = null)
     {
         _options = options ?? new SelfUpdateOptions();
         if (_options.MaximumPackageBytes <= 0 || _options.MaximumExtractedBytes <= 0 || _options.MaximumArchiveEntries <= 0 ||
-            _options.CheckTimeout <= TimeSpan.Zero || _options.DownloadTimeout <= TimeSpan.Zero) throw new ArgumentException("更新限制必须大于零。", nameof(options));
+            _options.CheckTimeout <= TimeSpan.Zero || _options.DownloadTimeout <= TimeSpan.Zero ||
+            !Enum.IsDefined(_options.PreferredSource)) throw new ArgumentException("更新限制或来源无效。", nameof(options));
         _http = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false }, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("HM-AppKit-Updater/0.6");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("HM-AppKit-Updater/0.15");
         _verifyExecutable = executableVersionVerifier ?? VerifyExecutableVersion;
         _retryDelay = retryDelay;
     }
@@ -43,35 +45,99 @@ public sealed class SelfUpdateClient : IDisposable
         if (!SelfUpdateVersion.TryParse(currentVersion, out var current)) throw new ArgumentException("当前应用版本无效。", nameof(currentVersion));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_options.CheckTimeout);
-        return await InstallerNetwork.ExecuteAsync(token => CheckReleaseAttemptAsync(current, token),
-            "HM AppKit 版本查询", LatestReleaseUri, null, null, timeout.Token, _retryDelay).ConfigureAwait(false);
+        if (_options.PreferredSource == SelfUpdateSource.Gitee)
+        {
+            // Reserve time for the fallback even if the preferred endpoint never responds.
+            using var preferred = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
+            preferred.CancelAfter(TimeSpan.FromTicks(Math.Max(1, Math.Min(TimeSpan.FromSeconds(8).Ticks, _options.CheckTimeout.Ticks / 2))));
+            try
+            {
+                var release = await InstallerNetwork.ExecuteAsync(token => CheckGiteeAttemptAsync(current, token),
+                    "HM AppKit Gitee 版本查询", GiteeLatestReleaseUri, null, null, preferred.Token, _retryDelay).ConfigureAwait(false);
+                timeout.Token.ThrowIfCancellationRequested();
+                if (release is not null) return release;
+            }
+            catch (OperationCanceledException) when (!timeout.IsCancellationRequested) { }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or JsonException)
+            { timeout.Token.ThrowIfCancellationRequested(); }
+        }
+        timeout.Token.ThrowIfCancellationRequested();
+        return await CheckGitHubAsync(current, LatestReleaseUri, timeout.Token).ConfigureAwait(false);
     }
 
-    private async Task<SelfUpdateRelease?> CheckReleaseAttemptAsync(SelfUpdateVersion current, CancellationToken token)
+    private Task<SelfUpdateRelease?> CheckGitHubAsync(SelfUpdateVersion current, Uri uri, CancellationToken token) =>
+        InstallerNetwork.ExecuteAsync(async ct =>
+        {
+            using var document = await ReadMetadataAsync(uri, SelfUpdateSource.GitHub, ct).ConfigureAwait(false);
+            return document is null ? null : ParseRelease(document.RootElement, current);
+        }, "HM AppKit GitHub 版本查询", uri, null, null, token, _retryDelay);
+
+    private async Task<SelfUpdateRelease?> CheckGiteeAttemptAsync(SelfUpdateVersion current, CancellationToken token)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUri);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-        if (_releaseJson is not null && _releaseETag is not null) request.Headers.TryAddWithoutValidation("If-None-Match", _releaseETag);
+        using var document = await ReadMetadataAsync(GiteeLatestReleaseUri, SelfUpdateSource.Gitee, token).ConfigureAwait(false);
+        if (document is null || document.RootElement.ValueKind == JsonValueKind.Null) return null;
+        var release = document.RootElement;
+        if (release.ValueKind != JsonValueKind.Object ||
+            !release.TryGetProperty("prerelease", out var preview) || preview.ValueKind != JsonValueKind.False ||
+            !release.TryGetProperty("id", out var idValue) || idValue.ValueKind != JsonValueKind.Number || !idValue.TryGetInt32(out var id) || id <= 0 ||
+            !release.TryGetProperty("tag_name", out var tagValue) || tagValue.ValueKind != JsonValueKind.String) return null;
+        var tag = tagValue.GetString()!;
+        if (!SelfUpdateVersion.TryParse(tag, out var version) || tag.Contains('+') || version.CompareTo(current) <= 0) return null;
+        var assets = new List<JsonElement>();
+        for (var page = 1; page <= 10; page++)
+        {
+            var uri = new Uri($"https://gitee.com/api/v5/repos/{GiteeRepository}/releases/{id}/attach_files?page={page}&per_page=100");
+            using var attachmentDocument = await ReadMetadataAsync(uri, SelfUpdateSource.Gitee, token).ConfigureAwait(false);
+            if (attachmentDocument is null || attachmentDocument.RootElement.ValueKind != JsonValueKind.Array)
+                throw new InvalidDataException("Gitee 更新附件列表格式无效。");
+            var batch = attachmentDocument.RootElement.EnumerateArray().ToArray();
+            if (batch.Length > 100 || batch.Any(item => item.ValueKind != JsonValueKind.Object))
+                throw new InvalidDataException("Gitee 更新附件列表超过限制或格式无效。");
+            assets.AddRange(batch.Select(item => item.Clone()));
+            if (batch.Length < 100) break;
+            if (page == 10) throw new InvalidDataException("Gitee 更新附件列表超过页数限制。");
+        }
+        var package = UniqueAsset(assets.ToArray(), PackageAssetName, requireUploaded: false);
+        var checksum = UniqueAsset(assets.ToArray(), ChecksumAssetName, requireUploaded: false);
+        if (!package.TryGetProperty("id", out var packageIdValue) || packageIdValue.ValueKind != JsonValueKind.Number || !packageIdValue.TryGetInt32(out var packageId) ||
+            !checksum.TryGetProperty("id", out var checksumIdValue) || checksumIdValue.ValueKind != JsonValueKind.Number || !checksumIdValue.TryGetInt32(out var checksumId) ||
+            !package.TryGetProperty("size", out var sizeValue) || sizeValue.ValueKind != JsonValueKind.Number || !sizeValue.TryGetInt64(out var size) ||
+            !checksum.TryGetProperty("size", out var checksumSize) || checksumSize.ValueKind != JsonValueKind.Number || !checksumSize.TryGetInt64(out var checksumBytes) ||
+            checksumBytes <= 0 || checksumBytes > ChecksumLimit) throw new InvalidDataException("Gitee 更新附件信息无效。");
+        var result = new SelfUpdateRelease
+        {
+            Source = SelfUpdateSource.Gitee, ReleaseId = id, PackageAssetId = packageId, ChecksumAssetId = checksumId,
+            Version = version.ToString(), Tag = tag,
+            ReleasePage = new($"https://gitee.com/{GiteeRepository}/releases/tag/{Uri.EscapeDataString(tag)}"),
+            Notes = OptionalString(release, "body") ?? "", PackageUri = RequiredUri(package, "browser_download_url"),
+            ChecksumUri = RequiredUri(checksum, "browser_download_url"), PackageBytes = size
+        };
+        ValidateRelease(result);
+        return result;
+    }
+
+    private async Task<JsonDocument?> ReadMetadataAsync(Uri uri, SelfUpdateSource source, CancellationToken token)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(source == SelfUpdateSource.GitHub ? "application/vnd.github+json" : "application/json"));
+        if (source == SelfUpdateSource.GitHub) request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+        _metadataCache.TryGetValue(uri.AbsoluteUri, out var cached);
+        if (cached.Json is not null && cached.ETag is not null) request.Headers.TryAddWithoutValidation("If-None-Match", cached.ETag);
         using var response = await SendRequestAsync(request, "HM AppKit 版本查询", token).ConfigureAwait(false);
-        ValidateResponseUri(response, LatestReleaseUri, api: true);
+        ValidateResponseUri(response, uri);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         byte[] bytes;
         if (response.StatusCode == HttpStatusCode.NotModified)
-            bytes = _releaseJson ?? throw new InvalidDataException("GitHub 返回了无法复用的更新响应。");
+            bytes = cached.Json ?? throw new InvalidDataException("更新源返回了无法复用的更新响应。");
         else
         {
-            EnsureSuccess(response, LatestReleaseUri);
+            EnsureSuccess(response, uri);
             bytes = await ReadBoundedAsync(response, MetadataLimit, token).ConfigureAwait(false);
         }
-        using var document = JsonDocument.Parse(bytes);
-        var result = ParseRelease(document.RootElement, current);
+        var document = JsonDocument.Parse(bytes);
         if (response.StatusCode != HttpStatusCode.NotModified)
-        {
-            _releaseJson = bytes;
-            _releaseETag = response.Headers.ETag?.ToString();
-        }
-        return result;
+            _metadataCache[uri.AbsoluteUri] = (response.Headers.ETag?.ToString(), bytes);
+        return document;
     }
 
     public async Task<SelfUpdatePackage> DownloadAndStageAsync(SelfUpdateRelease release,
@@ -82,13 +148,44 @@ public sealed class SelfUpdateClient : IDisposable
         timeout.CancelAfter(_options.DownloadTimeout);
         var token = timeout.Token;
         token.ThrowIfCancellationRequested();
+        if (release.Source == SelfUpdateSource.Gitee)
+        {
+            using var preferred = CancellationTokenSource.CreateLinkedTokenSource(token);
+            preferred.CancelAfter(TimeSpan.FromTicks(Math.Max(1, _options.DownloadTimeout.Ticks / 2)));
+            try { return await DownloadWithRetryAsync(release, progress, preferred.Token, token).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (preferred.IsCancellationRequested && !token.IsCancellationRequested) { }
+            catch (HttpRequestException ex) when (CanFallbackDownload(ex)) { token.ThrowIfCancellationRequested(); }
+            token.ThrowIfCancellationRequested();
+            progress?.Report(new(0, release.PackageBytes, "Gitee 更新下载暂不可用，正在切换 GitHub 同版本更新…"));
+            using var lookup = CancellationTokenSource.CreateLinkedTokenSource(token);
+            lookup.CancelAfter(_options.CheckTimeout);
+            var uri = new Uri($"https://api.github.com/repos/{Repository}/releases/tags/{Uri.EscapeDataString(release.Tag)}");
+            var fallback = await CheckGitHubAsync(default, uri, lookup.Token).ConfigureAwait(false);
+            if (fallback is null || fallback.Tag != release.Tag || fallback.Version != release.Version)
+                throw new InvalidDataException("GitHub 没有对应同版本的正式更新，已停止更新。");
+            return await DownloadWithRetryAsync(fallback, progress, token, token).ConfigureAwait(false);
+        }
+        return await DownloadWithRetryAsync(release, progress, token, token).ConfigureAwait(false);
+    }
+
+    private Task<SelfUpdatePackage> DownloadWithRetryAsync(SelfUpdateRelease release,
+        IProgress<SelfUpdateProgress>? progress, CancellationToken networkToken, CancellationToken operationToken)
+    {
         var retryLog = progress is null ? null : new RetryProgress(progress, release.PackageBytes);
-        return await InstallerNetwork.ExecuteAsync(ct => DownloadAndStageAttemptAsync(release, progress, ct),
-            "HM AppKit 更新包准备", release.PackageUri, retryLog, null, token, _retryDelay).ConfigureAwait(false);
+        return InstallerNetwork.ExecuteAsync(ct => DownloadAndStageAttemptAsync(release, progress, ct, operationToken),
+            "HM AppKit 更新包准备", release.PackageUri, retryLog, null, networkToken, _retryDelay);
+    }
+
+    private static bool CanFallbackDownload(Exception exception)
+    {
+        for (Exception? node = exception; node is not null; node = node.InnerException)
+            if (node is InvalidDataException or CryptographicException or System.Security.Authentication.AuthenticationException or
+                UnauthorizedAccessException or System.Security.SecurityException) return false;
+        return true;
     }
 
     private async Task<SelfUpdatePackage> DownloadAndStageAttemptAsync(SelfUpdateRelease release,
-        IProgress<SelfUpdateProgress>? progress, CancellationToken token)
+        IProgress<SelfUpdateProgress>? progress, CancellationToken token, CancellationToken operationToken)
     {
         var stagingRoot = Path.GetFullPath(_options.StagingRoot);
         EnsureNoReparsePoints(stagingRoot);
@@ -99,16 +196,16 @@ public sealed class SelfUpdateClient : IDisposable
         try
         {
             progress?.Report(new(0, release.PackageBytes, "正在验证更新校验文件…"));
-            using var checksumResponse = await SendAssetAsync(release.ChecksumUri, token).ConfigureAwait(false);
+            using var checksumResponse = await SendAssetAsync(release, checksum: true, token).ConfigureAwait(false);
             var checksumBytes = await ReadBoundedAsync(checksumResponse, ChecksumLimit, token).ConfigureAwait(false);
             var expectedHash = ParseChecksum(Encoding.UTF8.GetString(checksumBytes));
             if (release.ApiSha256 is not null && !string.Equals(release.ApiSha256, expectedHash, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("GitHub 校验值与发布校验文件不一致，已停止更新。");
+                throw new InvalidDataException("发布校验值与校验文件不一致，已停止更新。");
             var zipPath = Path.Combine(stage, "package.zip");
-            using (var packageResponse = await SendAssetAsync(release.PackageUri, token).ConfigureAwait(false))
+            using (var packageResponse = await SendAssetAsync(release, checksum: false, token).ConfigureAwait(false))
             {
                 if (packageResponse.Content.Headers.ContentLength is long length && length != release.PackageBytes)
-                    throw new InvalidDataException("更新包大小与 GitHub 发布信息不一致。");
+                    throw new InvalidDataException("更新包大小与发布信息不一致。");
                 await using var input = await OpenBodyAsync(packageResponse, token).ConfigureAwait(false);
                 await using var output = new FileStream(zipPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -120,21 +217,23 @@ public sealed class SelfUpdateClient : IDisposable
                     received += count;
                     if (received > release.PackageBytes || received > _options.MaximumPackageBytes) throw new InvalidDataException("更新包超过允许的大小。");
                     hash.AppendData(buffer, 0, count);
-                    await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
+                    await output.WriteAsync(buffer.AsMemory(0, count), operationToken).ConfigureAwait(false);
                     progress?.Report(new(received, release.PackageBytes, "正在下载 HM AppKit 更新…"));
                 }
                 if (received != release.PackageBytes) throw InstallerNetwork.ReadFailure(new EndOfStreamException("更新包下载不完整。"),
                     "HM AppKit 更新包读取", packageResponse.RequestMessage?.RequestUri ?? release.PackageUri);
                 var actualHash = Convert.ToHexString(hash.GetHashAndReset());
                 if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("更新包 SHA-256 校验失败，已停止更新。");
-                await output.FlushAsync(token).ConfigureAwait(false);
+                await output.FlushAsync(operationToken).ConfigureAwait(false);
             }
             progress?.Report(new(release.PackageBytes, release.PackageBytes, "正在校验并准备更新…"));
             var payload = Path.Combine(stage, "payload");
-            var files = await ExtractArchiveAsync(zipPath, payload, token).ConfigureAwait(false);
+            // Once all bytes are verified, only the caller's overall budget governs local preparation.
+            // Expiring a source budget here must not restart a valid package from another server.
+            var files = await ExtractArchiveAsync(zipPath, payload, operationToken).ConfigureAwait(false);
             var executable = Path.Combine(payload, ExecutableName);
             _verifyExecutable(executable, release.Version);
-            token.ThrowIfCancellationRequested();
+            operationToken.ThrowIfCancellationRequested();
             return new SelfUpdatePackage
             {
                 Release = release, StageDirectory = stage, ExtractedDirectory = payload,
@@ -183,29 +282,38 @@ public sealed class SelfUpdateClient : IDisposable
     {
         if (!SelfUpdateVersion.TryParse(release.Version, out var version) || !SelfUpdateVersion.TryParse(release.Tag, out var tagged) ||
             tagged != version || release.Tag.Contains('+') || release.PackageBytes <= 0 || release.PackageBytes > _options.MaximumPackageBytes ||
-            (release.ApiSha256 is not null && !ValidHash(release.ApiSha256))) throw new InvalidDataException("更新版本、大小或校验值无效。");
-        ValidateInitialAssetUri(release.PackageUri, release.Tag, PackageAssetName);
-        ValidateInitialAssetUri(release.ChecksumUri, release.Tag, ChecksumAssetName);
-        var expectedPage = $"https://github.com/{Repository}/releases/tag/{Uri.EscapeDataString(release.Tag)}";
+            !Enum.IsDefined(release.Source) || (release.ApiSha256 is not null && !ValidHash(release.ApiSha256))) throw new InvalidDataException("更新版本、大小或校验值无效。");
+        if (release.Source == SelfUpdateSource.Gitee &&
+            (release.ReleaseId is not > 0 || release.PackageAssetId is not > 0 || release.ChecksumAssetId is not > 0 ||
+             release.PackageAssetId == release.ChecksumAssetId)) throw new InvalidDataException("Gitee 更新发行版或附件 ID 无效。");
+        ValidateInitialAssetUri(release.PackageUri, release.Tag, PackageAssetName, release.Source);
+        ValidateInitialAssetUri(release.ChecksumUri, release.Tag, ChecksumAssetName, release.Source);
+        var site = release.Source == SelfUpdateSource.Gitee ? $"gitee.com/{GiteeRepository}" : $"github.com/{Repository}";
+        var expectedPage = $"https://{site}/releases/tag/{Uri.EscapeDataString(release.Tag)}";
         if (release.ReleasePage.AbsoluteUri != expectedPage) throw new InvalidDataException("更新发布页无效。");
     }
 
-    private async Task<HttpResponseMessage> SendAssetAsync(Uri initialUri, CancellationToken token)
+    private async Task<HttpResponseMessage> SendAssetAsync(SelfUpdateRelease release, bool checksum, CancellationToken token)
     {
+        var name = checksum ? ChecksumAssetName : PackageAssetName;
+        var attachmentId = checksum ? release.ChecksumAssetId : release.PackageAssetId;
+        var initialUri = release.Source == SelfUpdateSource.Gitee
+            ? new Uri($"https://gitee.com/api/v5/repos/{GiteeRepository}/releases/{release.ReleaseId}/attach_files/{attachmentId}/download")
+            : checksum ? release.ChecksumUri : release.PackageUri;
         var uri = initialUri;
         for (var redirects = 0; redirects <= 5; redirects++)
         {
-            ValidateAssetHost(uri);
+            ValidateAssetRequestUri(uri, release, name, attachmentId, initialUri);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             var response = await SendRequestAsync(request, "HM AppKit 更新附件请求", token).ConfigureAwait(false);
             try
             {
-                ValidateResponseUri(response, uri, api: false);
+                ValidateResponseUri(response, uri);
                 if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Redirect or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
                 {
                     var location = response.Headers.Location ?? throw new InvalidDataException("更新下载重定向缺少地址。");
                     uri = location.IsAbsoluteUri ? location : new Uri(uri, location);
-                    ValidateAssetHost(uri);
+                    ValidateAssetRequestUri(uri, release, name, attachmentId, initialUri);
                     if (uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) && uri.AbsolutePath != initialUri.AbsolutePath)
                         throw new InvalidDataException("更新下载不能重定向到其他 GitHub 资源。");
                     response.Dispose();
@@ -309,7 +417,7 @@ public sealed class SelfUpdateClient : IDisposable
         var info = FileVersionInfo.GetVersionInfo(executable);
         if (!string.Equals(info.ProductName, "HM AppKit", StringComparison.Ordinal) ||
             !SelfUpdateVersion.TryParse(info.ProductVersion, out var actual) || !SelfUpdateVersion.TryParse(expectedVersion, out var expected) || actual != expected)
-            throw new InvalidDataException("更新程序产品或版本与 GitHub 发布不一致。");
+            throw new InvalidDataException("更新程序产品或版本与发布信息不一致。");
     }
 
     private static string ParseChecksum(string text)
@@ -325,10 +433,11 @@ public sealed class SelfUpdateClient : IDisposable
         return matches[0].ToLowerInvariant();
     }
 
-    private static JsonElement UniqueAsset(JsonElement[] assets, string name)
+    private static JsonElement UniqueAsset(JsonElement[] assets, string name, bool requireUploaded = true)
     {
         var selected = assets.Where(asset => OptionalString(asset, "name") == name).ToArray();
-        if (selected.Length != 1 || OptionalString(selected[0], "state") != "uploaded") throw new InvalidDataException($"GitHub 发布缺少唯一有效附件：{name}");
+        if (selected.Length != 1 || (requireUploaded && OptionalString(selected[0], "state") != "uploaded"))
+            throw new InvalidDataException($"发布缺少唯一有效附件：{name}");
         return selected[0];
     }
 
@@ -339,27 +448,57 @@ public sealed class SelfUpdateClient : IDisposable
         ? uri : throw new InvalidDataException("GitHub 发布链接无效。");
     private static bool ValidHash(string hash) => hash.Length == 64 && hash.All(Uri.IsHexDigit);
 
-    private static void ValidateInitialAssetUri(Uri uri, string tag, string file)
+    private static void ValidateInitialAssetUri(Uri uri, string tag, string file, SelfUpdateSource source)
     {
-        ValidateAssetHost(uri);
-        var expected = $"https://github.com/{Repository}/releases/download/{Uri.EscapeDataString(tag)}/{file}";
-        if (uri.AbsoluteUri != expected) throw new InvalidDataException("更新附件不属于 HM AppKit 的指定 GitHub 发布。");
+        ValidateAssetHost(uri, source);
+        var site = source == SelfUpdateSource.Gitee ? $"gitee.com/{GiteeRepository}" : $"github.com/{Repository}";
+        var expected = $"https://{site}/releases/download/{Uri.EscapeDataString(tag)}/{file}";
+        if (uri.AbsoluteUri != expected) throw new InvalidDataException("更新附件不属于 HM AppKit 的指定发布。");
     }
 
-    private static void ValidateAssetHost(Uri uri)
+    private static void ValidateAssetHost(Uri uri, SelfUpdateSource source)
     {
+        if (!uri.IsAbsoluteUri) throw new InvalidDataException("更新下载地址必须是绝对 HTTPS 地址。");
+        var allowed = source == SelfUpdateSource.Gitee
+            ? uri.Host.Equals("gitee.com", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("foruda.gitee.com", StringComparison.OrdinalIgnoreCase)
+            : uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase) ||
+              uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
         if (!uri.IsAbsoluteUri || uri.Scheme != Uri.UriSchemeHttps || !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment) ||
-            !(uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase) ||
-              uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidDataException("更新下载地址不在允许的 GitHub HTTPS 域名中。");
+            !allowed) throw new InvalidDataException("更新下载地址不在允许的 HTTPS 域名中。");
     }
 
-    private static void ValidateResponseUri(HttpResponseMessage response, Uri requested, bool api)
+    private static void ValidateAssetRequestUri(Uri uri, SelfUpdateRelease release, string name, int? attachmentId, Uri initialUri)
+    {
+        ValidateAssetHost(uri, release.Source);
+        if (release.Source != SelfUpdateSource.Gitee) return;
+        if (uri.Host.Equals("gitee.com", StringComparison.OrdinalIgnoreCase))
+        {
+            var browser = $"https://gitee.com/{GiteeRepository}/releases/download/{Uri.EscapeDataString(release.Tag)}/{name}";
+            var attachment = $"https://gitee.com/{GiteeRepository}/attach_files/{attachmentId}/download/{name}";
+            if (uri != initialUri && uri.AbsoluteUri != browser && uri.AbsoluteUri != attachment)
+                throw new InvalidDataException("Gitee 更新下载不能跳转到其他发行版或附件。");
+        }
+        else
+        {
+            // Gitee normalizes stored CDN object names to lowercase, while API/display names preserve case.
+            var storedNames = "(?:" + Regex.Escape(name) + "|" + Regex.Escape(name.ToLowerInvariant()) + ")";
+            if (!Regex.IsMatch(uri.AbsolutePath, @"^/attach_file/[0-9]+/" + storedNames + "$", RegexOptions.CultureInvariant))
+                throw new InvalidDataException("Gitee 更新下载 CDN 路径或附件名称无效。");
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length != 2 || parts[0] is not ("token" or "ts" or "attname") || !seen.Add(parts[0]) || string.IsNullOrEmpty(parts[1]) ||
+                    (parts[0] == "attname" && Uri.UnescapeDataString(parts[1]) != name))
+                    throw new InvalidDataException("Gitee 更新下载 CDN 参数无效。");
+            }
+        }
+    }
+
+    private static void ValidateResponseUri(HttpResponseMessage response, Uri requested)
     {
         var actual = response.RequestMessage?.RequestUri ?? requested;
         if (actual != requested) throw new InvalidDataException("更新请求发生了未经验证的自动重定向。");
-        if (api && requested != LatestReleaseUri) throw new InvalidDataException("更新 API 地址无效。");
-        if (!api) ValidateAssetHost(actual);
     }
 
     private static void EnsureSuccess(HttpResponseMessage response, Uri requested)
@@ -370,14 +509,14 @@ public sealed class SelfUpdateClient : IDisposable
 
     private static async Task<byte[]> ReadBoundedAsync(HttpResponseMessage response, int limit, CancellationToken token)
     {
-        if (response.Content.Headers.ContentLength is long length && length > limit) throw new InvalidDataException("GitHub 更新信息超过大小限制。");
+        if (response.Content.Headers.ContentLength is long length && length > limit) throw new InvalidDataException("更新信息超过大小限制。");
         await using var input = await OpenBodyAsync(response, token).ConfigureAwait(false);
         using var output = new MemoryStream();
         var buffer = new byte[16 * 1024];
         int count;
         while ((count = await ReadBodyAsync(input, buffer, response, token).ConfigureAwait(false)) != 0)
         {
-            if (output.Length + count > limit) throw new InvalidDataException("GitHub 更新信息超过大小限制。");
+            if (output.Length + count > limit) throw new InvalidDataException("更新信息超过大小限制。");
             output.Write(buffer, 0, count);
         }
         if (response.Content.Headers.ContentLength is long expected)

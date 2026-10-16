@@ -1,0 +1,19 @@
+{
+  "version": "0.15.0",
+  "date": "2026-10-16",
+  "giteeRepository": "https://gitee.com/huanmeng-it/HM-AppKit",
+  "tests": { "core": 138, "jingmai": 26, "runtime": 3, "cache": 35, "network": 37, "updateDownload": 95, "updateApply": 33, "total": 367 },
+  "liveGiteeDownload": {
+    "tag": "v0.14",
+    "releaseId": 1210250,
+    "packageAssetId": 3406739,
+    "checksumAssetId": 3406736,
+    "packageBytes": 62365873,
+    "sha256": "a3546cf72dc01e904c744f01af16610191e5c355e0a6f76308d9d636c6ee7b53",
+    "zipAndProgramVersionValidated": true,
+    "executed": false
+  },
+  "vendorApplicationsInstalledOrUninstalled": false,
+  "publishingCredentialsStoredInClient": false,
+  "crossPlatformAutomaticPublishingConfigured": false
+}

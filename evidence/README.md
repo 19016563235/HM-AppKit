@@ -8,3 +8,5 @@
 
 
 v0.14 安装排序、位置异常、精简界面和更新重试验证见 v0.14-installation/verification.json。
+
+v0.15 Gitee 更新源、GitHub 回退和真实完整包下载验证见 v0.15-gitee/verification.json。

@@ -19,12 +19,13 @@ if (args.Length != 0 && args[0] == "--live-check")
 if (args.Length != 0 && args[0] == "--live-stage")
 {
     var root = args.Length > 1 ? Path.GetFullPath(args[1]) : new SelfUpdateOptions().StagingRoot;
-    using var client = new SelfUpdateClient(new SelfUpdateOptions { StagingRoot = root });
+    var source = args.Length > 2 ? Enum.Parse<SelfUpdateSource>(args[2], ignoreCase: true) : SelfUpdateSource.Gitee;
+    using var client = new SelfUpdateClient(new SelfUpdateOptions { StagingRoot = root, PreferredSource = source });
     var release = await client.CheckForUpdateAsync("0.0.0") ?? throw new InvalidOperationException("No stable release found.");
     var package = await client.DownloadAndStageAsync(release);
     Console.WriteLine(JsonSerializer.Serialize(new
     {
-        release.Version, release.Tag, release.PackageBytes, release.ReleasePage,
+        Source = package.Release.Source.ToString(), release.Version, release.Tag, release.PackageBytes, release.ReleasePage,
         package.StageDirectory, package.ExecutablePath, package.Sha256,
         FileCount = package.RelativeFiles.Count, Executed = false
     }, new JsonSerializerOptions { WriteIndented = true }));
@@ -236,12 +237,12 @@ await Test("ZIP symlinks and Windows reparse entries are rejected", async () =>
 });
 await Test("ZIP extraction budget is enforced before writing payload", async () =>
 {
-    using var fixture = new Fixture(options: root => new SelfUpdateOptions { StagingRoot = root, MaximumExtractedBytes = 10 });
+    using var fixture = new Fixture(options: root => new SelfUpdateOptions { PreferredSource = SelfUpdateSource.GitHub, StagingRoot = root, MaximumExtractedBytes = 10 });
     await Throws<InvalidDataException>(async () => await fixture.Client.DownloadAndStageAsync(await fixture.Release())); fixture.AssertNoStages();
 });
 await Test("ZIP entry count budget is enforced", async () =>
 {
-    using var fixture = new Fixture(options: root => new SelfUpdateOptions { StagingRoot = root, MaximumArchiveEntries = 2 });
+    using var fixture = new Fixture(options: root => new SelfUpdateOptions { PreferredSource = SelfUpdateSource.GitHub, StagingRoot = root, MaximumArchiveEntries = 2 });
     await Throws<InvalidDataException>(async () => await fixture.Client.DownloadAndStageAsync(await fixture.Release())); fixture.AssertNoStages();
 });
 await Test("Production verifier rejects fake EXE even with valid archive checksum", async () =>
@@ -342,6 +343,8 @@ await Test("Cancellation during updater backoff stops before another request", a
     fixture.AssertNoStages(); fixture.AssertPreserved();
 });
 
+await GiteeUpdateTests.RunAsync(Test);
+
 Console.WriteLine($"{passed} passed; {failures.Count} failed.");
 foreach (var failure in failures) Console.Error.WriteLine(failure);
 return failures.Count == 0 ? 0 : 1;
@@ -395,7 +398,7 @@ sealed class Fixture : IDisposable
         };
         Directory.CreateDirectory(Path.GetDirectoryName(Config)!); Directory.CreateDirectory(Path.GetDirectoryName(Cache)!);
         File.WriteAllText(Config, "original-config"); File.WriteAllText(Cache, "original-cache");
-        Client = new(options?.Invoke(StagingRoot) ?? new SelfUpdateOptions { StagingRoot = StagingRoot }, new Handler(Respond),
+        Client = new(options?.Invoke(StagingRoot) ?? new SelfUpdateOptions { PreferredSource = SelfUpdateSource.GitHub, StagingRoot = StagingRoot }, new Handler(Respond),
             productionVerifier ? null : (path, version) =>
             {
                 Verifications++;

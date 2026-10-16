@@ -40,8 +40,15 @@ public readonly record struct SelfUpdateVersion(int Major, int Minor, int Patch 
         ? $"{Major}.{Minor}.{Patch}" : $"{Major}.{Minor}.{Patch}.{Revision}";
 }
 
+public enum SelfUpdateSource { GitHub, Gitee }
+
 public sealed record SelfUpdateRelease
 {
+    // Older saved update manifests and callers describe GitHub releases.
+    public SelfUpdateSource Source { get; init; } = SelfUpdateSource.GitHub;
+    public int? ReleaseId { get; init; }
+    public int? PackageAssetId { get; init; }
+    public int? ChecksumAssetId { get; init; }
     public required string Version { get; init; }
     public required string Tag { get; init; }
     public required Uri ReleasePage { get; init; }
@@ -70,6 +77,7 @@ public sealed record SelfUpdateProgress(long ReceivedBytes, long? TotalBytes, st
 
 public sealed class SelfUpdateOptions
 {
+    public SelfUpdateSource PreferredSource { get; init; } = SelfUpdateSource.Gitee;
     public string StagingRoot { get; init; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HM AppKit", "Updates");
     public TimeSpan CheckTimeout { get; init; } = TimeSpan.FromSeconds(20);
     public TimeSpan DownloadTimeout { get; init; } = TimeSpan.FromMinutes(15);

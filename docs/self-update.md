@@ -1,6 +1,8 @@
 # HM AppKit 自身更新
 
-HM AppKit v0.6 起会在打开时检查 [19016563235/HM-AppKit 的 GitHub Releases](https://github.com/19016563235/HM-AppKit/releases/latest)，只提示高于当前程序版本的正式版，忽略草稿和预发布版本。未发现更新、网络不可用或 GitHub 暂时限流时，当前版本仍可正常使用。
+HM AppKit v0.6 起会在打开时检查正式版更新。v0.15 起优先使用 [Gitee 发行版](https://gitee.com/huanmeng-it/HM-AppKit/releases)，无新版、发行版不完整或网络不可用时回退 [GitHub Releases](https://github.com/19016563235/HM-AppKit/releases/latest)。只提示高于当前程序版本的正式版，忽略预发布版本；GitHub 草稿也会忽略。检查或下载失败时当前版本仍可正常使用。
+
+检查总预算 20 秒，其中 Gitee 最多 8 秒；下载总预算 15 分钟，其中 Gitee 网络请求最多使用一半，为 GitHub 回退留出时间。Gitee 下载网络失败时仅允许使用 GitHub 同一标签的正式发行版，并独立重新验证 GitHub 的校验文件。哈希、ZIP、程序版本、来源白名单或磁盘错误不会通过换源绕过。更多发布配置见 [Gitee 分发说明](gitee-migration.md)。
 
 ## 使用
 
