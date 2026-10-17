@@ -88,6 +88,83 @@ try {
             Assert-True ($null -eq $request.Headers.Authorization)
         } finally { $request.Dispose() }
     }
+    Test-Case 'CI GitHub token authenticates only the fixed release metadata GETs' {
+        foreach ($path in @('/releases/latest', '/releases/tags/v0.17')) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, ($script:HmGitHubApi + $path))
+            try {
+                Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token'
+                Assert-True ($request.Headers.Authorization.Scheme -ceq 'Bearer')
+                Assert-True ($request.Headers.Authorization.Parameter -ceq 'fake-github-read-token')
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'local metadata remains anonymous without a GitHub token' {
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, ($script:HmGitHubApi + '/releases/latest'))
+        try {
+            Set-HmGitHubMetadataAuthentication $request ''
+            Assert-True ($null -eq $request.Headers.Authorization)
+        } finally { $request.Dispose() }
+    }
+    Test-Case 'GitHub token is absent for Gitee CDNs other repos and unsafe addresses' {
+        foreach ($uri in @('https://gitee.com/api/v5/repos/huanmeng-it/HM-AppKit/releases',
+            'https://foruda.gitee.com/attach_file/1/package.zip', 'https://release-assets.githubusercontent.com/package.zip',
+            'https://api.github.com/repos/other/repository/releases/latest',
+            'https://api.github.com/repos/19016563235/HM-AppKit-other/releases/latest',
+            'https://api.github.com/user', 'https://evil.example/repos/19016563235/HM-AppKit/releases/latest',
+            'http://api.github.com/repos/19016563235/HM-AppKit/releases/latest',
+            'https://api.github.com:8443/repos/19016563235/HM-AppKit/releases/latest',
+            'https://user@api.github.com/repos/19016563235/HM-AppKit/releases/latest',
+            ($script:HmGitHubApi + '/releases/latest?other=1'), ($script:HmGitHubApi + '/releases/latest#fragment'))) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $uri)
+            try {
+                $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', 'fake-github-read-token')
+                Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token'
+                Assert-True ($null -eq $request.Headers.Authorization)
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'GitHub token is never attached to writes or non-GET methods' {
+        foreach ($method in @('POST', 'PUT', 'DELETE', 'HEAD')) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::new($method), ($script:HmGitHubApi + '/releases/latest'))
+            try {
+                Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token'
+                Assert-True ($null -eq $request.Headers.Authorization)
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'GitHub authentication is removed on every redirect including the same API' {
+        foreach ($uri in @(($script:HmGitHubApi + '/releases/tags/v0.17'), 'https://release-assets.githubusercontent.com/package.zip', 'https://gitee.com/')) {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $uri)
+            try {
+                $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', 'fake-github-read-token')
+                Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token' -IsRedirect
+                Assert-True ($null -eq $request.Headers.Authorization)
+            } finally { $request.Dispose() }
+        }
+    }
+    Test-Case 'GitHub and Gitee request credentials remain distinct' {
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, ($script:HmGiteeApi + '/releases/73/attach_files'))
+        try {
+            Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token'
+            Assert-True ($null -eq $request.Headers.Authorization)
+            Set-HmGiteeAuthentication $request 'fake-gitee-write-token'
+            Assert-True ($request.Headers.Authorization.Parameter -ceq 'fake-gitee-write-token')
+        } finally { $request.Dispose() }
+    }
+    Test-Case 'published package downloads stay anonymous even with a CI GitHub token' {
+        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $asset.browser_download_url)
+        try {
+            Set-HmGitHubMetadataAuthentication $request 'fake-github-read-token'
+            Assert-True ($null -eq $request.Headers.Authorization)
+        } finally { $request.Dispose() }
+    }
+    Test-Case 'sync workflow injects its existing read token separately from Gitee credentials' {
+        $workflow = [IO.File]::ReadAllText((Join-Path $PSScriptRoot '../../.github/workflows/sync-gitee.yml'))
+        Assert-True ($workflow -match '(?m)^\s+GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}\s*$')
+        Assert-True ($workflow -match '(?m)^\s+GITEE_TOKEN:\s*\$\{\{\s*secrets\.GITEE_TOKEN\s*\}\}\s*$')
+        Assert-True ($workflow -match '(?m)^permissions:\s*\r?\n\s+contents:\s+read\s*$')
+        Assert-True ($workflow -notmatch '(?m)^\s+contents:\s+write\s*$')
+    }
     foreach ($fileName in @($script:HmPackageName, ($script:HmPackageName + '.sha256'))) {
         Test-Case ("real multipart wire format for $fileName") {
             $payload = [Text.Encoding]::UTF8.GetBytes('original-test-file-bytes')

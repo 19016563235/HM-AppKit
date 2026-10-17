@@ -52,6 +52,7 @@ jobs:
       - name: Sync code and published release
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           HM_SYNC_EVENT: ${{ github.event_name }}
           HM_SYNC_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch || 'latest' }}
           HM_RELEASE_COMMIT: ${{ github.event.workflow_run.head_sha }}

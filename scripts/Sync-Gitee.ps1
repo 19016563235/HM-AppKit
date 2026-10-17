@@ -49,6 +49,19 @@ function Set-HmGiteeAuthentication([System.Net.Http.HttpRequestMessage]$Request,
     $Request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $AccessToken)
 }
 
+function Set-HmGitHubMetadataAuthentication([System.Net.Http.HttpRequestMessage]$Request, [string]$AccessToken, [switch]$IsRedirect) {
+    # Authentication belongs to this request only, never HttpClient defaults or redirects.
+    $Request.Headers.Authorization = $null
+    if ([string]::IsNullOrWhiteSpace($AccessToken) -or $IsRedirect -or $Request.Method.Method -cne 'GET') { return }
+    $uri = $Request.RequestUri
+    if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'api.github.com' -or -not $uri.IsDefaultPort -or
+        $uri.UserInfo -or $uri.Fragment -or $uri.Query -or
+        $uri.AbsolutePath -cnotmatch '^/repos/19016563235/HM-AppKit/releases/(latest|tags/v[0-9]+(?:\.[0-9]+){1,3})$') { return }
+    # CI's automatic contents:read token avoids shared-runner anonymous API limits.
+    # An absent local GITHUB_TOKEN deliberately keeps the existing anonymous behavior.
+    $Request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $AccessToken)
+}
+
 function New-HmGiteeMultipart {
     param(
         [Parameter(Mandatory)][IO.Stream]$FileStream,
@@ -128,6 +141,7 @@ function Invoke-HmHttp {
                 $request.Headers.UserAgent.ParseAdd('HM-AppKit-Gitee-Sync/1.0')
                 $request.Headers.Accept.ParseAdd('application/json')
                 if ($Authenticated) { Set-HmGiteeAuthentication $request $env:GITEE_TOKEN }
+                else { Set-HmGitHubMetadataAuthentication $request $env:GITHUB_TOKEN -IsRedirect:($redirect -ne 0) }
                 if ($Method -eq 'POST') {
                     if ($UploadPath) {
                         $stream = [IO.File]::OpenRead($UploadPath)
@@ -252,7 +266,7 @@ function Invoke-HmGitAttempt {
     $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
     foreach ($arg in $Arguments) { $info.ArgumentList.Add($arg) }
     foreach ($key in @($info.Environment.Keys)) {
-        if ($key -match '^GIT_(TRACE|CONFIG_|CURL_VERBOSE)' -or $key -eq 'GITEE_TOKEN') { $null = $info.Environment.Remove($key) }
+        if ($key -match '^GIT_(TRACE|CONFIG_|CURL_VERBOSE)' -or $key -in @('GITEE_TOKEN', 'GITHUB_TOKEN')) { $null = $info.Environment.Remove($key) }
     }
     $info.Environment['GIT_TERMINAL_PROMPT'] = '0'
     $info.Environment['GCM_INTERACTIVE'] = 'Never'
