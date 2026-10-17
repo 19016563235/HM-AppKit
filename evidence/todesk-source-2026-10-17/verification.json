@@ -1,0 +1,38 @@
+{
+  "Checked": "2026-10-17",
+  "MetadataSource": "https://www.todesk.com/download.html",
+  "Cause": "The old unanchored win_link URL regex skipped the personal client's Nuxt variable and selected the daas_win_link substring.",
+  "StableProperty": "data[0].clientInfo.win_link",
+  "StableVersionProperty": "data[0].clientInfo.win_version",
+  "PersonalRemoteControl": {
+    "Source": "https://dl.todesk.com/irrigation/ToDesk_5.2.2.0.exe",
+    "Length": 159375560,
+    "Sha256": "2E8573C9EB4DD0A934DE8CFE6F5DF9B8D007C2EF29DE725D96A704D268B5B2FA",
+    "Signature": "Valid",
+    "Publisher": "Hainan YouQu Technology Co., Ltd",
+    "CertificateThumbprint": "00CFAE943DD09815CFE1563F3A3518FD6F6B922E",
+    "FileVersion": "5.2.2.0",
+    "Executed": false
+  },
+  "IncorrectlySelectedCloudComputer": {
+    "Source": "https://dl.todesk.com/daas/ToDesk_DaaS_v1.1.1.1.exe",
+    "Length": 57012640,
+    "Sha256": "A84EE0A460A16D32B54072F868B0C5FD301CE92390469B1621F4771452560F51",
+    "Signature": "Valid",
+    "Publisher": "Shanghai Jiuchi Network Technology Co., Ltd.",
+    "CertificateThumbprint": "A19CE8D52C1A60C1F282443F0B989B27743F1BCD",
+    "ProductName": "ToDesk云电脑",
+    "FileVersion": "1.1.1.1.678",
+    "Executed": false,
+    "AddedToAllowedPublishers": false
+  },
+  "ProductionCacheValidation": {
+    "Operation": "Production provider download and cache verification only; no installer execution",
+    "FirstPass": "Resolved the official stable personal client, downloaded it, verified its signature and SHA-256, and retained it in a dedicated test cache.",
+    "SecondPass": "The official metadata returned 304. The same retained file, signature, length and SHA-256 were verified and reused.",
+    "SamePathAsFirst": true,
+    "LatestConfirmed": true,
+    "ExistingUserCacheModified": false,
+    "InstallerExecuted": false
+  }
+}

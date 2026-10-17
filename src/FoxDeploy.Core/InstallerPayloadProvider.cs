@@ -426,6 +426,9 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
 
     public static Uri ParseDownloadUri(OnlineInstallerDefinition definition, string metadata, Uri? baseUri = null)
     {
+        if (definition.MetadataFormat == "todesk-windows")
+            return ValidateAllowedUri(ToDeskDownloadMetadata.Parse(metadata), definition.AllowedDownloadHosts);
+        if (definition.MetadataFormat != "") throw new InvalidDataException("不支持的官方元数据解析配置。");
         var normalized = WebUtility.HtmlDecode(metadata).Replace("\\/", "/", StringComparison.Ordinal).Replace("\\u002F", "/", StringComparison.OrdinalIgnoreCase);
         for (var layer = 0; layer < 3; layer++) normalized = normalized.Replace("\\\"", "\"", StringComparison.Ordinal);
         var match = Regex.Match(normalized, definition.UrlPattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
@@ -500,12 +503,18 @@ public sealed class InstallerPayloadProvider : IInstallerPayloadProvider, IDispo
         SourceFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(entry.SourceProfileFingerprint + "|" + source.ExpectedSha256))),
         MetadataETag = source.MetadataETag, MetadataLastModified = source.MetadataLastModified, MetadataFinalUrl = source.MetadataFinalUrl
     };
-    private static string SourceFingerprint(OnlineInstallerDefinition profile) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+    private static string SourceFingerprint(OnlineInstallerDefinition profile)
     {
-        profile.DownloadUrl, profile.MetadataUrl, profile.UrlPattern, profile.WingetManifestPath, profile.InstallerType,
-        Hosts = profile.AllowedDownloadHosts.Order(StringComparer.OrdinalIgnoreCase), Publishers = profile.AllowedPublishers.Order(StringComparer.OrdinalIgnoreCase),
-        Headers = profile.RequestHeaders.OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
-    }))));
+        // Keep existing cache identities unchanged for every source without a dedicated metadata parser.
+        var value = JsonSerializer.Serialize(new
+        {
+            profile.DownloadUrl, profile.MetadataUrl, profile.UrlPattern, profile.WingetManifestPath, profile.InstallerType,
+            Hosts = profile.AllowedDownloadHosts.Order(StringComparer.OrdinalIgnoreCase), Publishers = profile.AllowedPublishers.Order(StringComparer.OrdinalIgnoreCase),
+            Headers = profile.RequestHeaders.OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+        });
+        if (profile.MetadataFormat != "") value += "|MetadataFormat:" + profile.MetadataFormat;
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    }
     private static string LocalFingerprint(LocalInstallerDefinition profile) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(profile))));
     private static string ExecutionFingerprint(InstallerProfile profile) => JsonSerializer.Serialize(new
     {

@@ -29,6 +29,8 @@ public sealed record OnlineInstallerDefinition : InstallerProfile
     // DownloadUrl may be an official redirect-to-latest endpoint.
     public string DownloadUrl { get; init; } = "";
     public string MetadataUrl { get; init; } = "";
+    // Explicit non-executing parsers for vendor metadata that cannot be selected safely by a URL regex.
+    public string MetadataFormat { get; init; } = "";
     // A bounded regex against official metadata, with a named group "url".
     public string UrlPattern { get; init; } = "";
     public List<string> AllowedDownloadHosts { get; init; } = [];

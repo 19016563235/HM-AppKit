@@ -428,6 +428,7 @@ public partial class MainWindow : Window
         foreach (var row in selected) row.SetStatus(InstallState.Pending, "等待开始");
         _runCancellation = new CancellationTokenSource();
         SetRunning(true);
+        BeginSupportReport();
         UpdateRunProgress(selected.Count);
         RunStatus.Text = $"正在部署 {selected.Count} 个应用…";
         RunHint.Text = "已接受所选软件及 WinGet 源协议。Windows 管理员授权提示仍需在本机确认。";
@@ -483,6 +484,7 @@ public partial class MainWindow : Window
             _runCancellation = null;
             SetRunning(false);
         }
+        OfferSupportReport(selected, runError);
     }
 
     private void KeyboardCommit() => System.Windows.Input.Keyboard.ClearFocus();
@@ -536,6 +538,7 @@ public partial class MainWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => AppendLog(message)); return; }
         var text = $"{DateTime.Now:HH:mm:ss}  {message}{Environment.NewLine}";
+        RecordSupportLog(text);
         LogBox.AppendText(text);
         LogBox.ScrollToEnd();
         try

@@ -222,6 +222,33 @@ await Test("Changed source policy cannot silently reuse an old offline package",
     var changed = fixture.App with { OnlineInstaller = fixture.App.OnlineInstaller! with { DownloadUrl = "https://official.test/other.exe" } };
     await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(changed, new DeploymentSettings(), fixture.Log, default); });
 });
+await Test("Adding optional metadata parsers preserves legacy fingerprints of unrelated sources", async () =>
+{
+    using var fixture = new Fixture();
+    await using (var payload = await fixture.Prepare()) { }
+    var profile = fixture.App.OnlineInstaller!;
+    var legacy = Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+    {
+        profile.DownloadUrl, profile.MetadataUrl, profile.UrlPattern, profile.WingetManifestPath, profile.InstallerType,
+        Hosts = profile.AllowedDownloadHosts.Order(StringComparer.OrdinalIgnoreCase), Publishers = profile.AllowedPublishers.Order(StringComparer.OrdinalIgnoreCase),
+        Headers = profile.RequestHeaders.OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+    })));
+    Check(fixture.Index()["SourceProfileFingerprint"]!.GetValue<string>() == legacy, "Unrelated sources would needlessly discard their verified cache identity.");
+    fixture.Server.Offline = true;
+    await using var cached = await fixture.Prepare();
+    Check(!cached.LatestConfirmed && cached.Sha256 == fixture.ExpectedHash, "Existing unrelated cache was not available offline.");
+});
+await Test("Changing to a dedicated metadata parser invalidates old source cache without deleting it", async () =>
+{
+    using var fixture = new Fixture(metadata: true);
+    string oldPath;
+    await using (var payload = await fixture.Prepare()) oldPath = payload.FilePath;
+    var oldIndex = File.ReadAllBytes(fixture.IndexPath);
+    fixture.Server.Offline = true;
+    var changed = fixture.App with { OnlineInstaller = fixture.App.OnlineInstaller! with { MetadataFormat = "todesk-windows" } };
+    await Throws<HttpRequestException>(async () => { await using var payload = await fixture.Provider.PrepareAsync(changed, new DeploymentSettings(), fixture.Log, default); });
+    Check(File.Exists(oldPath) && File.ReadAllBytes(fixture.IndexPath).SequenceEqual(oldIndex), "Parser change deleted the old user-owned cache during an offline check.");
+});
 await Test("Legacy Local mode ignores retired custom directory and uses automatic official source", async () =>
 {
     using var fixture = new Fixture();

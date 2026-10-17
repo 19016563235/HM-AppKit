@@ -1,7 +1,8 @@
 param(
     [ValidateSet('win-x64', 'win-arm64')]
     [string]$Runtime = 'win-x64',
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [string]$SupportConfigPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,7 +42,8 @@ $publicEvidence = @(
     'v0.12-ui/verification.json',
     'v0.13-network/verification.json',
     'v0.14-installation/verification.json',
-    'v0.15-gitee/verification.json'
+    'v0.15-gitee/verification.json',
+    'todesk-source-2026-10-17/verification.json'
 )
 foreach ($evidence in $publicEvidence) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ('evidence/' + $evidence)) -PathType Leaf)) {
@@ -72,13 +74,18 @@ try {
     & dotnet run --project tests/FoxDeploy.UpdateApply.Tests/FoxDeploy.UpdateApply.Tests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw '助手更新应用与配置保留验证未通过。' }
 
-    & dotnet publish src/FoxDeploy.App/FoxDeploy.App.csproj -c Release -r $Runtime --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:PublishTrimmed=false -p:DebugType=None -o $OutputDirectory
+    $supportBundle = Join-Path $projectRoot 'src/FoxDeploy.App/obj/support/hm-support.bin'
+    & (Join-Path $PSScriptRoot 'New-SupportReceiverBundle.ps1') -OutputPath $supportBundle -LocalConfigPath $SupportConfigPath
+    if ($env:GITHUB_ACTIONS -eq 'true' -and -not (Test-Path -LiteralPath $supportBundle -PathType Leaf)) {
+        throw '正式发布缺少 Actions Secret HM_APPKIT_SUPPORT_CONFIG；未生成没有接收入口的正式包。'
+    }
+    & dotnet publish src/FoxDeploy.App/FoxDeploy.App.csproj -c Release -r $Runtime --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:PublishTrimmed=false -p:DebugType=None -p:SupportReceiverBundlePath=$supportBundle -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '桌面应用发布失败。' }
 
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $OutputDirectory -Force
     $docsDestination = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDestination -Force | Out-Null
-    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md', 'hm-appkit-v0.12.md', 'hm-appkit-v0.13.md', 'hm-appkit-v0.14.md', 'hm-appkit-v0.15.md', 'weixin-directory-2026-10-16.md', 'gitee-migration.md')) {
+    foreach ($document in @('real-install-test-2026-10-15.md', 'jingmai-research-2026-10-15.md', 'hm-appkit-v0.5-test-2026-10-15.md', 'self-update.md', 'hm-appkit-v0.7.md', 'hm-appkit-v0.8.md', 'hm-appkit-v0.9.md', 'hm-appkit-v0.10.md', 'hm-appkit-v0.11.md', 'hm-appkit-v0.12.md', 'hm-appkit-v0.13.md', 'hm-appkit-v0.14.md', 'hm-appkit-v0.15.md', 'weixin-directory-2026-10-16.md', 'gitee-migration.md', 'diagnostic-reports.md', 'todesk-source-2026-10-17.md')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $document)) -Destination $docsDestination -Force
     }
     # Only sanitized, named summaries are public. Raw host snapshots, vendor
@@ -102,6 +109,10 @@ try {
     Write-Output "SHA256: $executableHash"
 
     $archive = Join-Path (Split-Path -Parent $OutputDirectory) "HM-AppKit-$Runtime.zip"
+    # Private report destinations and bot signing keys never belong in a release.
+    # Unknown root files are outside archiveInputs; reject private files in subfolders too.
+    $privateSupportFiles = @(Get-ChildItem -LiteralPath $OutputDirectory -File -Recurse -Force | Where-Object { $_.Name -in @('support.private.json', 'support.json') })
+    if ($privateSupportFiles.Count -gt 0) { throw '构建输出目录含私有日志接收配置，请改用干净的输出目录；未生成公开压缩包。' }
     $archiveInputs = @(
         $executable,
         (Join-Path $OutputDirectory 'README.md'),

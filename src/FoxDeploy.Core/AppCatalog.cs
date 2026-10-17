@@ -68,7 +68,12 @@ public static partial class AppCatalog
             if (online.RequestHeaders is null || online.RequestHeaders.Any(header => string.IsNullOrWhiteSpace(header.Key) ||
                 header.Key.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '-') || header.Value is null || header.Value.Any(char.IsControl)))
                 throw new InvalidDataException($"{app.Name} 的元数据请求头无效。");
-            if (!string.IsNullOrWhiteSpace(online.MetadataUrl))
+            if (online.MetadataFormat is not ("" or "todesk-windows") ||
+                (online.MetadataFormat == "todesk-windows" &&
+                    (online.MetadataUrl != "https://www.todesk.com/download.html" ||
+                     !string.IsNullOrWhiteSpace(online.DownloadUrl) || !string.IsNullOrWhiteSpace(online.WingetManifestPath))))
+                throw new InvalidDataException($"{app.Name} 的官方元数据解析配置无效。");
+            if (!string.IsNullOrWhiteSpace(online.MetadataUrl) && online.MetadataFormat == "")
             {
                 try
                 {

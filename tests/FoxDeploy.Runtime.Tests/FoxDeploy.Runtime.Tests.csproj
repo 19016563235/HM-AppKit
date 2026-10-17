@@ -6,5 +6,9 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../src/FoxDeploy.Core/FoxDeploy.Core.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/FoxDeploy.Core/FoxDeploy.Core.csproj" />
+    <Compile Include="../../src/FoxDeploy.App/AdministratorStartup.cs" Link="AdministratorStartup.cs" />
+    <Compile Include="../../src/FoxDeploy.App/BuiltInSupportReceiver.cs" Link="BuiltInSupportReceiver.cs" />
+  </ItemGroup>
 </Project>

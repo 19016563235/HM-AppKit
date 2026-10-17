@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 
 namespace FoxDeploy.App;
@@ -6,6 +7,30 @@ public partial class App : Application
 {
     private async void OnStartup(object sender, StartupEventArgs e)
     {
+        // Keep an asInvoker bootstrap so older updaters can start a staged helper.
+        // No settings, caches or application windows are opened before elevation.
+        try
+        {
+            var elevation = AdministratorStartup.RequestIfNeeded(AdministratorStartup.IsAdministrator(),
+                () => AdministratorStartup.CreateStartInfo(Environment.ProcessPath ?? "", Environment.GetCommandLineArgs().FirstOrDefault() ?? "",
+                    e.Args, AppContext.BaseDirectory),
+                start =>
+                {
+                    using var process = Process.Start(start)
+                        ?? throw new InvalidOperationException("管理员进程未能启动。");
+                });
+            if (elevation != AdministratorStartupResult.AlreadyElevated)
+            {
+                Shutdown(elevation == AdministratorStartupResult.Canceled ? 1 : 0);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"HM AppKit 需要管理员权限，启动未完成。\n\n{ex.Message}", "HM AppKit", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown(1);
+            return;
+        }
         if (e.Args.Contains("--apply-update", StringComparer.Ordinal))
         {
             if (e.Args.Length != 2 || e.Args[0] != "--apply-update")

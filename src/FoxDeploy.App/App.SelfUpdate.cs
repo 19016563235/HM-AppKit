@@ -47,7 +47,7 @@ public partial class App
             {
                 using var restarted = Process.Start(new ProcessStartInfo(result.ExecutablePath)
                 {
-                    UseShellExecute = false,
+                    UseShellExecute = true,
                     WorkingDirectory = Path.GetDirectoryName(result.ExecutablePath)!,
                     WindowStyle = ProcessWindowStyle.Normal
                 }) ?? throw new IOException("更新后程序未能自动打开，请通过原来的桌面快捷方式打开。");

@@ -83,14 +83,14 @@
     "RegistryNames": [
       "ToDesk"
     ],
-    "Notes": "从官网稳定版下载入口获取当前安装包并保存；使用已核验的 NSIS /S 和 /D 参数。已安装直接跳过，远程访问需自行配置。",
+    "Notes": "从官网个人版 Windows 稳定版 win_link 获取完整安装包；只读解析 NUXT 数据变量，排除 DaaS、精简版、下载器及灰度入口。保留原有精确发布者签名校验及 NSIS /S、/D 参数。已安装直接跳过，远程访问需自行配置。",
     "OnlineInstaller": {
       "SilentSupported": true,
       "InstallLocationArgument": "/D={InstallDirectory}",
       "SilentArguments": [
         "/S"
       ],
-      "UrlPattern": "win_link:\"(?<url>https[^\"]+)\"",
+      "MetadataFormat": "todesk-windows",
       "AllowedDownloadHosts": [
         "www.todesk.com",
         "dl.todesk.com"

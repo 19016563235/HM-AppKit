@@ -6,6 +6,7 @@ internal static class PayloadValidationTests
 {
     public static async Task RunAsync(Func<string, Func<Task>, Task> test)
     {
+        await ToDeskMetadataTests.RunAsync(test);
         await test("Official download URLs reject insecure or lookalike hosts", () =>
         {
             foreach (var value in new[] { "http://official.example/app.exe", "https://official.example.evil.test/app.exe", "https://official.example:8443/app.exe", "https://user:pw@official.example/app.exe", "file:///C:/app.exe" })

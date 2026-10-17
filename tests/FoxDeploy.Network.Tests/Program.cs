@@ -3,6 +3,8 @@ var failures = new List<string>();
 await PayloadNetworkTests.RunAsync(Test);
 await ManifestNetworkTests.RunAsync(Test);
 await DiagnosticsTests.RunAsync(Test);
+await SupportReportTests.RunAsync(Test);
+await FeishuSupportTests.RunAsync(Test);
 Console.WriteLine($"Network tests: {passed} passed, {failures.Count} failed.");
 return failures.Count == 0 ? 0 : 1;
 

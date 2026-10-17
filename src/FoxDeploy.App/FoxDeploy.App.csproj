@@ -11,6 +11,7 @@
     <Description>按岗位批量安装 Windows 应用</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/HM-AppKit.ico</ApplicationIcon>
+    <SupportReceiverBundlePath Condition="'$(SupportReceiverBundlePath)' == ''">$(MSBuildProjectDirectory)/obj/support/hm-support.bin</SupportReceiverBundlePath>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../FoxDeploy.Core/FoxDeploy.Core.csproj" />
@@ -20,4 +21,11 @@
     <Resource Include="Assets/HM-AppKit.png" />
     <Resource Include="Assets/HM-AppKit.ico" />
   </ItemGroup>
+  <!-- Added at target execution time, after Build.ps1 has generated the ignored
+       bundle. The resource is embedded only; it is not copied beside the EXE. -->
+  <Target Name="IncludeBuiltInSupportReceiver" BeforeTargets="AssignTargetPaths">
+    <ItemGroup Condition="Exists('$(SupportReceiverBundlePath)')">
+      <EmbeddedResource Include="$(SupportReceiverBundlePath)" LogicalName="FoxDeploy.support-receiver.bin" />
+    </ItemGroup>
+  </Target>
 </Project>
