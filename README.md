@@ -2,7 +2,7 @@
 
 Windows 装机助手：选择岗位、软件和安装位置，一键依次安装。安装时自动复用本地缓存并检查官方更新，第三方安装包单独存放，不嵌入助手，也不随发布压缩包分发。
 
-v0.16 提供 GitHub 到 Gitee 的代码与发行版附件自动同步工作流，配置仓库凭据后随发布执行。助手更新继续优先检查和下载 Gitee 正式版，网络失败时回退 GitHub；两边都必须提供同标签的正式包与 SHA-256 校验文件。配置和业务安装包缓存继续保留。
+v0.17 整合 GitHub 到 Gitee 自动同步的实际验证修复：附件认证、大文件传输时限与临时 Git 读取故障恢复。GitHub 正式发布成功后自动同步代码、标签及原始发布附件。助手更新继续优先检查和下载 Gitee 正式版，网络失败时回退 GitHub；两边都必须提供同标签的正式包与 SHA-256 校验文件。配置和业务安装包缓存继续保留。
 
 ## 使用
 
@@ -88,7 +88,7 @@ v0.5 对京麦使用“常规安装·预填目录”：向导将预填所选目�
 .\scripts\Build.ps1
 ```
 
-版本统一维护在 `Directory.Build.props`。v0.16 发布位置为 `artifacts/HM-AppKit/v0.16/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.16/HM-AppKit-win-x64.zip`，同目录生成 `.zip.sha256`。后续版本的输出目录由版本号自动推导。构建与自动化验证不会安装业务软件，也不会复制 `Local Installer` 中的安装包进入产物。
+版本统一维护在 `Directory.Build.props`。v0.17 发布位置为 `artifacts/HM-AppKit/v0.17/win-x64/HM AppKit.exe`，压缩包为 `artifacts/HM-AppKit/v0.17/HM-AppKit-win-x64.zip`，同目录生成 `.zip.sha256`。后续版本的输出目录由版本号自动推导。构建与自动化验证不会安装业务软件，也不会复制 `Local Installer` 中的安装包进入产物。
 
 构建使用仓库中的 `evidence/` 公开摘要，不依赖本地测试产生的 `artifacts/`、已安装业务软件或历史主机快照。
 
